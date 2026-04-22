@@ -6,7 +6,7 @@
 # Log file
 *.log
 log/
-*.pid
+*.pid/
 *.gocache
 *.bin
 
