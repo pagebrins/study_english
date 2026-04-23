@@ -39,3 +39,5 @@ hs_err_pid*
 */dist/
 */node_modules/
 */target/
+backend/.env
+frontend/.env
