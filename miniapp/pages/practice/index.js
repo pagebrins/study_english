@@ -1,0 +1,105 @@
+const { questionService } = require('../../services/question')
+const { requireLogin } = require('../../utils/guard')
+const { getSelectedMode, setExplainContext } = require('../../utils/session')
+
+Page({
+  data: {
+    mode: getSelectedMode(),
+    loading: false,
+    submitting: false,
+    error: '',
+    generated: [],
+    answers: [],
+    issues: [],
+  },
+  onShow() {
+    if (!requireLogin()) return
+    const mode = getSelectedMode()
+    this.setData({ mode })
+  },
+  async generateQuestions() {
+    const { mode, loading } = this.data
+    if (!mode || loading) {
+      if (!mode) wx.showToast({ title: '请先去模式页选择模式', icon: 'none' })
+      return
+    }
+    this.setData({ loading: true, error: '', generated: [], answers: [], issues: [] })
+    try {
+      const generated = await questionService.generate(mode.id)
+      this.setData({
+        generated,
+        answers: generated.map(() => ''),
+        issues: generated.map(() => []),
+      })
+      this.syncExplainContext()
+    } catch (error) {
+      this.setData({
+        error: error instanceof Error ? error.message : '生成题目失败',
+      })
+    } finally {
+      this.setData({ loading: false })
+    }
+  },
+  onAnswerInput(event) {
+    const index = Number(event.currentTarget.dataset.index)
+    const answers = [...this.data.answers]
+    answers[index] = event.detail.value
+    this.setData({ answers })
+    this.syncExplainContext()
+  },
+  async submitAnswer(event) {
+    const index = Number(event.currentTarget.dataset.index)
+    const current = this.data.generated[index]
+    const mode = this.data.mode
+    if (!current || !mode || this.data.submitting) return
+    const answer = this.data.answers[index] || ''
+    this.setData({ submitting: true, error: '' })
+    try {
+      const issues = await questionService.analyze({
+        mode_id: mode.id,
+        question: current.question,
+        answer_text: answer,
+        answer_key: current.answer_key,
+      })
+      const issueMatrix = [...this.data.issues]
+      issueMatrix[index] = issues
+      this.setData({ issues: issueMatrix })
+      await questionService.create({
+        mode_id: mode.id,
+        question: current.question,
+        answer_key: current.answer_key,
+        answer_text: answer,
+        score: issues.length === 0 ? 100 : Math.max(60, 100 - issues.length * 10),
+        pre_generated_id: current.pre_generated_id,
+      })
+      this.syncExplainContext(index + 1)
+      wx.showToast({ title: '已提交', icon: 'success' })
+    } catch (error) {
+      this.setData({
+        error: error instanceof Error ? error.message : '提交答案失败',
+      })
+    } finally {
+      this.setData({ submitting: false })
+    }
+  },
+  goChat() {
+    this.syncExplainContext()
+    wx.navigateTo({ url: '/pages/chat/index?source=practice' })
+  },
+  syncExplainContext(currentQuestionIndex) {
+    const mode = this.data.mode
+    setExplainContext({
+      page: 'practice',
+      mode_id: mode && mode.id,
+      study_type: mode && mode.type,
+      translation_mode: mode && mode.mode,
+      current_question_index: currentQuestionIndex,
+      question_snapshots: this.data.generated.map((item, index) => ({
+        index: index + 1,
+        question: item.question,
+        answer_key: item.answer_key,
+        user_answer: this.data.answers[index] || '',
+      })),
+    })
+  },
+})
