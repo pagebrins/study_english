@@ -1,0 +1,57 @@
+.history-hero,
+.filter-card,
+.history-card {
+  padding: 30rpx;
+}
+
+.filter-card,
+.history-card {
+  margin-top: 24rpx;
+}
+
+.mode-label {
+  margin-top: 24rpx;
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.history-index {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.score-tag {
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 22rpx;
+}
+
+.score-tag.green {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.history-question,
+.history-answer,
+.history-time {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 25rpx;
+  line-height: 1.7;
+}
+
+.history-time {
+  color: #94a3b8;
+}
+
+.ask-button {
+  margin-top: 20rpx;
+}

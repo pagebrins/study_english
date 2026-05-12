@@ -1,0 +1,7 @@
+{
+  "projectname": "study_english_miniapp",
+  "appid": "your-miniapp-appid",
+  "setting": {
+    "compileHotReLoad": true
+  }
+}

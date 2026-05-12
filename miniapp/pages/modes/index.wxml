@@ -1,0 +1,44 @@
+<view class="page">
+  <view class="hero-card mode-hero">
+    <text class="section-title">{{userName}}，今天准备练什么？</text>
+    <text class="section-subtitle">先选学习类型，再选择适合的模式，练习页会直接复用这里的选择。</text>
+    <view class="type-group">
+      <button class="{{selectedType === 1 ? 'type-chip active' : 'type-chip'}}" data-value="1" bindtap="onTypeChange">单词</button>
+      <button class="{{selectedType === 2 ? 'type-chip active' : 'type-chip'}}" data-value="2" bindtap="onTypeChange">句子</button>
+      <button class="{{selectedType === 3 ? 'type-chip active' : 'type-chip'}}" data-value="3" bindtap="onTypeChange">文章</button>
+    </view>
+    <view class="hero-actions">
+      <button class="primary-button action-button" bindtap="goPractice">开始练习</button>
+      <button class="ghost-button action-button ghost" bindtap="onLogout">退出登录</button>
+    </view>
+  </view>
+
+  <view wx:if="{{error}}" class="section-card feedback-card">
+    <text class="error-text">{{error}}</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="section-card feedback-card">
+    <text class="muted">正在加载模式...</text>
+  </view>
+
+  <empty-state
+    wx:if="{{!loading && !error && modes.length === 0}}"
+    title="还没有可用模式"
+    description="先去网页后台创建模式，或确认当前账号是否有对应数据。"
+  />
+
+  <view wx:for="{{modes}}" wx:key="id" class="{{selectedModeID === item.id ? 'section-card mode-card active' : 'section-card mode-card'}}" data-id="{{item.id}}" bindtap="onChooseMode">
+    <view class="mode-card-head">
+      <text class="mode-title">{{item.name}}</text>
+      <text class="pill">Lv{{item.level}}</text>
+    </view>
+    <text class="mode-description">{{item.description || '暂无描述'}}</text>
+    <view class="mode-meta">
+      <text class="meta-text">题量 {{item.numbers}}</text>
+      <text class="meta-text">方向 {{item.mode === 1 ? '中译英' : '英译中'}}</text>
+    </view>
+    <view wx:if="{{item.requirements.length > 0}}" class="requirement-list">
+      <text wx:for="{{item.requirements}}" wx:key="*this" class="requirement-item">{{item}}</text>
+    </view>
+  </view>
+</view>

@@ -69,6 +69,27 @@ CREATE TABLE IF NOT EXISTS themes (
   PRIMARY KEY (name, level)
 );
 
+CREATE TABLE IF NOT EXISTS words (
+  id INTEGER NOT NULL UNIQUE,
+  word TEXT NOT NULL,
+  definition TEXT NOT NULL,
+  l1_category TEXT NOT NULL,
+  l2_category TEXT NOT NULL DEFAULT '',
+  example TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (word)
+);
+
+CREATE TABLE IF NOT EXISTS word_tags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  word_id INTEGER NOT NULL,
+  category_id INTEGER NOT NULL DEFAULT 0,
+  category_name TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS user_questions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
@@ -96,6 +117,10 @@ CREATE INDEX IF NOT EXISTS idx_modes_user_id ON modes(user_id);
 CREATE INDEX IF NOT EXISTS idx_modes_theme_id ON modes(theme_id);
 CREATE INDEX IF NOT EXISTS idx_themes_parent_id ON themes(parent_id);
 CREATE INDEX IF NOT EXISTS idx_themes_level ON themes(level);
+CREATE INDEX IF NOT EXISTS idx_words_l1_category ON words(l1_category);
+CREATE INDEX IF NOT EXISTS idx_words_l2_category ON words(l2_category);
+CREATE INDEX IF NOT EXISTS idx_word_tags_word_id ON word_tags(word_id);
+CREATE INDEX IF NOT EXISTS idx_word_tags_category_name ON word_tags(category_name);
 CREATE INDEX IF NOT EXISTS idx_user_questions_user_time ON user_questions(user_id, create_time);
 CREATE INDEX IF NOT EXISTS idx_user_questions_mode_id ON user_questions(mode_id);
 CREATE INDEX IF NOT EXISTS idx_pgq_user_mode_status ON pre_generated_questions(user_id, mode_id, status);
@@ -115,6 +140,7 @@ INSERT OR IGNORE INTO permissions (code, name, description) VALUES ('history.vie
 INSERT OR IGNORE INTO permissions (code, name, description) VALUES ('practice.use', 'Practice Use', 'Use practice generate/submit');
 INSERT OR IGNORE INTO permissions (code, name, description) VALUES ('chat.use', 'Chat Use', 'Use help chat panel');
 INSERT OR IGNORE INTO permissions (code, name, description) VALUES ('settings.theme.manage', 'Theme Settings', 'Manage theme settings');
+INSERT OR IGNORE INTO permissions (code, name, description) VALUES ('settings.knowledge.manage', 'Knowledge Settings', 'Manage word knowledge base');
 INSERT OR IGNORE INTO permissions (code, name, description) VALUES ('settings.permission.manage', 'Permission Settings', 'Manage permission settings');
 
 INSERT OR IGNORE INTO role_permissions (role_id, permission_id)

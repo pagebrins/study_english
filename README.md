@@ -4,6 +4,7 @@ AI-powered English learning platform for students with basic English skills.
 
 ## Stack
 - Frontend: React + Vite + Tailwind CSS + Zustand
+- Miniapp: Native WeChat Mini Program + TypeScript
 - Backend: Go + Gin + Gorm + SQLite
 
 ## Run locally
@@ -27,6 +28,15 @@ AI-powered English learning platform for students with basic English skills.
   - `bash scripts/start-local.sh`
 - Stop both services:
   - `bash scripts/stop-local.sh`
+
+## Miniapp
+- 小程序代码位于 `miniapp/`
+- 使用微信开发者工具直接打开 `miniapp/`
+- 微信登录依赖后端配置：
+  - `WECHAT_MINIAPP_APP_ID`
+  - `WECHAT_MINIAPP_APP_SECRET`
+- 发布脚本：
+  - `bash scripts/deploy-miniapp.sh --version 0.1.0 --desc "miniapp init"`
 
 ## API response contract
 All backend APIs return:

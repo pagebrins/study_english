@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "模式选择",
+  "usingComponents": {
+    "empty-state": "/components/empty-state/index"
+  }
+}

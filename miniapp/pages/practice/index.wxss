@@ -1,0 +1,56 @@
+.practice-hero,
+.question-item {
+  padding: 32rpx;
+}
+
+.question-item {
+  margin-top: 24rpx;
+}
+
+.question-index {
+  display: inline-flex;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: #ecfeff;
+  color: #0f766e;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.question-text {
+  display: block;
+  margin: 18rpx 0 22rpx;
+  font-size: 30rpx;
+  line-height: 1.7;
+  color: #0f172a;
+}
+
+.submit-button {
+  margin-top: 20rpx;
+}
+
+.issue-box {
+  margin-top: 22rpx;
+  padding: 20rpx;
+  border-radius: 18rpx;
+  background: #fff7ed;
+}
+
+.ok-box {
+  background: #ecfdf5;
+}
+
+.issue-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #9a3412;
+}
+
+.issue-item {
+  display: block;
+  margin-top: 10rpx;
+  color: #c2410c;
+  font-size: 24rpx;
+  line-height: 1.7;
+}

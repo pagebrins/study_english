@@ -478,6 +478,128 @@ func (r *Repository) ListAllThemes(requestID string) ([]model.Theme, error) {
 	return items, err
 }
 
+func (r *Repository) ListWords(requestID string, word, l1Category, l2Category, tag *string) ([]model.Word, error) {
+	logger.L().Info("db list words", zap.String("request_id", requestID))
+	var items []model.Word
+	query := r.db.Model(&model.Word{}).Preload("Tags")
+	if word != nil && strings.TrimSpace(*word) != "" {
+		keyword := "%" + strings.TrimSpace(*word) + "%"
+		query = query.Where("word LIKE ?", keyword)
+	}
+	if l1Category != nil && strings.TrimSpace(*l1Category) != "" {
+		query = query.Where("l1_category = ?", strings.TrimSpace(*l1Category))
+	}
+	if l2Category != nil && strings.TrimSpace(*l2Category) != "" {
+		query = query.Where("l2_category = ?", strings.TrimSpace(*l2Category))
+	}
+	if tag != nil && strings.TrimSpace(*tag) != "" {
+		query = query.Joins("JOIN word_tags ON word_tags.word_id = words.id").
+			Where("word_tags.category_name = ?", strings.TrimSpace(*tag)).
+			Distinct("words.*")
+	}
+	err := query.Order("l1_category asc, l2_category asc, word asc, id asc").Find(&items).Error
+	if err != nil {
+		logger.L().Error("db list words failed", zap.String("request_id", requestID), zap.Error(err))
+	}
+	return items, err
+}
+
+func (r *Repository) CreateWord(requestID string, word *model.Word) error {
+	logger.L().Info("db create word", zap.String("request_id", requestID), zap.String("word", word.Word))
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		tags := word.Tags
+		word.Tags = nil
+		if err := tx.Create(word).Error; err != nil {
+			logger.L().Error("db create word failed", zap.String("request_id", requestID), zap.Error(err))
+			return err
+		}
+		if len(tags) == 0 {
+			word.Tags = []model.WordTag{}
+			return nil
+		}
+		for index := range tags {
+			tags[index].WordID = word.ID
+		}
+		if err := tx.Create(&tags).Error; err != nil {
+			logger.L().Error("db create word tags failed", zap.String("request_id", requestID), zap.Error(err))
+			return err
+		}
+		word.Tags = tags
+		return nil
+	})
+}
+
+func (r *Repository) GetWordByID(requestID string, id uint) (*model.Word, error) {
+	logger.L().Info("db get word by id", zap.String("request_id", requestID), zap.Uint("word_id", id))
+	var item model.Word
+	if err := r.db.Preload("Tags").First(&item, id).Error; err != nil {
+		logger.L().Error("db get word by id failed", zap.String("request_id", requestID), zap.Error(err))
+		return nil, err
+	}
+	return &item, nil
+}
+
+func (r *Repository) ExistsWord(requestID string, word string, l1Category string, l2Category string, excludeID uint) (bool, error) {
+	logger.L().Info("db exists word", zap.String("request_id", requestID), zap.String("word", word))
+	var count int64
+	query := r.db.Model(&model.Word{}).
+		Where("word = ? AND l1_category = ? AND l2_category = ?", word, l1Category, l2Category)
+	if excludeID > 0 {
+		query = query.Where("id <> ?", excludeID)
+	}
+	if err := query.Count(&count).Error; err != nil {
+		logger.L().Error("db exists word failed", zap.String("request_id", requestID), zap.Error(err))
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *Repository) UpdateWord(requestID string, word *model.Word) error {
+	logger.L().Info("db update word", zap.String("request_id", requestID), zap.Uint("word_id", word.ID))
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		updates := map[string]any{
+			"word":        word.Word,
+			"definition":  word.Definition,
+			"l1_category": word.L1Category,
+			"l2_category": word.L2Category,
+			"example":     word.Example,
+		}
+		if err := tx.Model(&model.Word{}).Where("id = ?", word.ID).Updates(updates).Error; err != nil {
+			logger.L().Error("db update word failed", zap.String("request_id", requestID), zap.Error(err))
+			return err
+		}
+		if err := tx.Where("word_id = ?", word.ID).Delete(&model.WordTag{}).Error; err != nil {
+			logger.L().Error("db delete word tags failed", zap.String("request_id", requestID), zap.Error(err))
+			return err
+		}
+		if len(word.Tags) == 0 {
+			word.Tags = []model.WordTag{}
+			return nil
+		}
+		tags := make([]model.WordTag, len(word.Tags))
+		copy(tags, word.Tags)
+		for index := range tags {
+			tags[index].ID = 0
+			tags[index].WordID = word.ID
+		}
+		if err := tx.Create(&tags).Error; err != nil {
+			logger.L().Error("db recreate word tags failed", zap.String("request_id", requestID), zap.Error(err))
+			return err
+		}
+		word.Tags = tags
+		return nil
+	})
+}
+
+func (r *Repository) DeleteWord(requestID string, id uint) error {
+	logger.L().Info("db delete word", zap.String("request_id", requestID), zap.Uint("word_id", id))
+	err := r.db.Delete(&model.Word{}, id).Error
+	if err != nil {
+		logger.L().Error("db delete word failed", zap.String("request_id", requestID), zap.Error(err))
+	}
+	return err
+}
+
 func (r *Repository) CreateQuestion(requestID string, question *model.UserQuestion) error {
 	logger.L().Info("db create question", zap.String("request_id", requestID), zap.Uint("user_id", question.UserID), zap.Uint("mode_id", question.ModeID))
 	if question.CreateTime.IsZero() {

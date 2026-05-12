@@ -1,0 +1,25 @@
+<view class="page">
+  <view class="chat-card chat-head">
+    <text class="section-title">AI 讲解</text>
+    <text class="section-subtitle">可以问“第 2 题为什么错”“这题有没有更自然的表达”等问题。</text>
+  </view>
+
+  <view class="chat-card message-list">
+    <view wx:for="{{messages}}" wx:key="id" class="{{item.role === 'user' ? 'message user' : item.role === 'assistant' ? 'message assistant' : 'message system'}}">
+      <text>{{item.content}}</text>
+    </view>
+    <text wx:if="{{error}}" class="error-text">{{error}}</text>
+  </view>
+
+  <view class="chat-card composer">
+    <textarea
+      class="field-textarea"
+      placeholder="输入你的问题..."
+      value="{{input}}"
+      bindinput="onInput"
+    />
+    <button class="primary-button" bindtap="onSend" loading="{{sending}}">
+      {{sending ? '发送中...' : '发送给 AI'}}
+    </button>
+  </view>
+</view>

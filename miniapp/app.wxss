@@ -1,0 +1,122 @@
+page {
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: "PingFang SC", "Helvetica Neue", sans-serif;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.hero-card,
+.section-card,
+.chat-card,
+.question-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  box-shadow: 0 10rpx 30rpx rgba(15, 23, 42, 0.08);
+}
+
+.section-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.section-subtitle {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.primary-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  color: #ffffff;
+  font-size: 30rpx;
+  font-weight: 600;
+  border: none;
+}
+
+.secondary-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  border-radius: 20rpx;
+  background: #ecfeff;
+  color: #0f766e;
+  font-size: 28rpx;
+  font-weight: 600;
+  border: 2rpx solid #99f6e4;
+}
+
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 24rpx;
+  border-radius: 18rpx;
+  background: #f8fafc;
+  color: #475569;
+  border: 2rpx solid #e2e8f0;
+  font-size: 26rpx;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 12rpx;
+  color: #334155;
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.field-input,
+.field-picker,
+.field-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 18rpx;
+  border: 2rpx solid #cbd5e1;
+  background: #ffffff;
+  padding: 22rpx 24rpx;
+  font-size: 28rpx;
+  color: #0f172a;
+}
+
+.field-textarea {
+  min-height: 200rpx;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  background: #ecfeff;
+  color: #0f766e;
+  font-size: 22rpx;
+}
+
+.muted {
+  color: #64748b;
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.success-text {
+  color: #047857;
+  font-size: 24rpx;
+  line-height: 1.6;
+}

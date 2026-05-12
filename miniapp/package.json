@@ -1,0 +1,22 @@
+{
+  "name": "study-english-miniapp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "WeChat Mini Program client for study_english",
+  "scripts": {
+    "lint": "eslint --ext .ts .",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck",
+    "dev:hint": "echo \"Use WeChat DevTools to open ./miniapp\"",
+    "upload": "node scripts/upload.js"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.57.0",
+    "@typescript-eslint/parser": "^8.57.0",
+    "eslint": "^9.39.0",
+    "eslint-config-prettier": "^10.1.8",
+    "miniprogram-api-typings": "^4.0.7",
+    "miniprogram-ci": "^2.1.13",
+    "typescript": "^5.9.3"
+  }
+}

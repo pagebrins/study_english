@@ -136,6 +136,29 @@ type Theme struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// Word stores vocabulary knowledge base entries.
+type Word struct {
+	ID         uint      `gorm:"primaryKey" json:"id"`
+	Word       string    `gorm:"type:varchar(120);not null;index:idx_word_category,unique" json:"word"`
+	Definition string    `gorm:"type:text;not null" json:"definition"`
+	L1Category string    `gorm:"column:l1_category;type:varchar(120);not null;index:idx_word_category,unique" json:"l1_category"`
+	L2Category string    `gorm:"column:l2_category;type:varchar(120);not null;default:'';index:idx_word_category,unique" json:"l2_category"`
+	Example    string    `gorm:"type:text" json:"example"`
+	Tags       []WordTag `gorm:"foreignKey:WordID;constraint:OnDelete:CASCADE" json:"tags"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// WordTag stores tag data attached to a word.
+type WordTag struct {
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	WordID       uint      `gorm:"index;not null" json:"word_id"`
+	CategoryID   uint      `gorm:"column:category_id;not null;default:0" json:"category_id"`
+	CategoryName string    `gorm:"column:category_name;type:varchar(120);not null" json:"category_name"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 // UserQuestion stores answered questions.
 type UserQuestion struct {
 	ID             uint      `gorm:"primaryKey" json:"id"`

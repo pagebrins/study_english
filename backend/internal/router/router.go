@@ -19,6 +19,8 @@ import (
 func Build(
 	repo *repository.Repository,
 	jwtSecret,
+	wechatMiniAppID,
+	wechatMiniAppSecret,
 	llmAPIKey,
 	llmEndpoint,
 	llmModelGenerate,
@@ -51,9 +53,10 @@ func Build(
 		MaxAge:           12 * time.Hour,
 	}))
 
-	authService := service.NewAuthService(repo, jwtSecret)
+	authService := service.NewAuthService(repo, jwtSecret, wechatMiniAppID, wechatMiniAppSecret)
 	modeService := service.NewModeService(repo)
 	themeService := service.NewThemeService(repo)
+	wordService := service.NewWordService(repo)
 	permissionService := service.NewPermissionService(repo)
 	questionService := service.NewQuestionService(
 		repo,
@@ -78,6 +81,7 @@ func Build(
 	authHandler := handler.NewAuthHandler(authService)
 	modeHandler := handler.NewModeHandler(modeService)
 	themeHandler := handler.NewThemeHandler(themeService)
+	wordHandler := handler.NewWordHandler(wordService)
 	permissionHandler := handler.NewPermissionHandler(permissionService)
 	questionHandler := handler.NewQuestionHandler(questionService)
 	scoreHandler := handler.NewScoreHandler(scoreService)
@@ -86,6 +90,7 @@ func Build(
 	authGroup := v1.Group("/auth")
 	authGroup.POST("/register", authHandler.Register)
 	authGroup.POST("/login", authHandler.Login)
+	authGroup.POST("/wechat-mini-login", authHandler.WechatMiniLogin)
 	authGroup.POST("/reset-password", authHandler.ResetPassword)
 
 	protected := v1.Group("")
@@ -97,11 +102,19 @@ func Build(
 	protected.DELETE("/modes/:id", modeHandler.Delete)
 
 	protected.GET("/themes", themeHandler.List)
+	protected.GET("/words", wordHandler.List)
+	protected.GET("/words/export", wordHandler.Export)
 	settingsGroup := protected.Group("")
 	settingsGroup.Use(middleware.RequirePermission(authz.PermSettingsThemeManage))
 	settingsGroup.POST("/themes", themeHandler.Create)
 	settingsGroup.PUT("/themes/:id", themeHandler.Update)
 	settingsGroup.DELETE("/themes/:id", themeHandler.Delete)
+
+	knowledgeGroup := protected.Group("")
+	knowledgeGroup.Use(middleware.RequirePermission(authz.PermSettingsKnowledgeManage))
+	knowledgeGroup.POST("/words", wordHandler.Create)
+	knowledgeGroup.PUT("/words/:id", wordHandler.Update)
+	knowledgeGroup.DELETE("/words/:id", wordHandler.Delete)
 
 	permissionGroup := protected.Group("")
 	permissionGroup.Use(middleware.RequirePermission(authz.PermSettingsPermissionEdit))

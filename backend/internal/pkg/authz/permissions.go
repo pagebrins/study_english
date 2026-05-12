@@ -5,14 +5,15 @@ const (
 	RoleLearner = "learner"
 	RoleGuest   = "guest"
 
-	PermDashboardView          = "dashboard.view"
-	PermModesManage            = "modes.manage"
-	PermStudyView              = "study.view"
-	PermHistoryView            = "history.view"
-	PermPracticeUse            = "practice.use"
-	PermChatUse                = "chat.use"
-	PermSettingsThemeManage    = "settings.theme.manage"
-	PermSettingsPermissionEdit = "settings.permission.manage"
+	PermDashboardView           = "dashboard.view"
+	PermModesManage             = "modes.manage"
+	PermStudyView               = "study.view"
+	PermHistoryView             = "history.view"
+	PermPracticeUse             = "practice.use"
+	PermChatUse                 = "chat.use"
+	PermSettingsThemeManage     = "settings.theme.manage"
+	PermSettingsKnowledgeManage = "settings.knowledge.manage"
+	PermSettingsPermissionEdit  = "settings.permission.manage"
 )
 
 var DefaultRoleSeeds = []struct {
@@ -37,6 +38,7 @@ var DefaultPermissionSeeds = []struct {
 	{Code: PermPracticeUse, Name: "Practice Use", Description: "Use practice generate/submit"},
 	{Code: PermChatUse, Name: "Chat Use", Description: "Use help chat panel"},
 	{Code: PermSettingsThemeManage, Name: "Theme Settings", Description: "Manage theme settings"},
+	{Code: PermSettingsKnowledgeManage, Name: "Knowledge Settings", Description: "Manage word knowledge base"},
 	{Code: PermSettingsPermissionEdit, Name: "Permission Settings", Description: "Manage permission settings"},
 }
 
@@ -49,6 +51,7 @@ var DefaultRolePermissionCodes = map[string][]string{
 		PermPracticeUse,
 		PermChatUse,
 		PermSettingsThemeManage,
+		PermSettingsKnowledgeManage,
 		PermSettingsPermissionEdit,
 	},
 	RoleLearner: {

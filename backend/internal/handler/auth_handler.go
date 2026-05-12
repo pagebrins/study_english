@@ -64,6 +64,25 @@ func (h *AuthHandler) Login(ctx *gin.Context) {
 	response.JSON(ctx, http.StatusOK, "ok", gin.H{"token": token, "user": user})
 }
 
+func (h *AuthHandler) WechatMiniLogin(ctx *gin.Context) {
+	requestID := middleware.GetRequestID(ctx)
+	var req struct {
+		Code string `json:"code" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.L().Error("auth wechat mini login bind failed", zap.String("request_id", requestID), zap.Error(err))
+		response.JSON(ctx, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+	token, user, err := h.service.WechatMiniLogin(requestID, req.Code)
+	if err != nil {
+		logger.L().Warn("auth wechat mini login failed", zap.String("request_id", requestID), zap.Error(err))
+		response.JSON(ctx, http.StatusUnauthorized, err.Error(), nil)
+		return
+	}
+	response.JSON(ctx, http.StatusOK, "ok", gin.H{"token": token, "user": user})
+}
+
 func (h *AuthHandler) ResetPassword(ctx *gin.Context) {
 	requestID := middleware.GetRequestID(ctx)
 	var req struct {

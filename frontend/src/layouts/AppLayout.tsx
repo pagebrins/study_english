@@ -36,6 +36,7 @@ export const AppLayout = () => {
   const canUsePractice = hasPermission(user, 'practice.use')
   const canUseChat = hasPermission(user, 'chat.use')
   const canManageTheme = hasPermission(user, 'settings.theme.manage')
+  const canManageKnowledge = hasPermission(user, 'settings.knowledge.manage')
   const canManagePermission = hasPermission(user, 'settings.permission.manage')
   const visibleSections = useMemo(() => {
     return navSections.filter((section) => section.key !== 'practice' || canUsePractice)
@@ -102,7 +103,7 @@ export const AppLayout = () => {
       </aside>
 
       <header className="col-start-2 flex items-center justify-end border-b border-zinc-800 bg-zinc-950 px-6">
-        {(canManageTheme || canManagePermission) && (
+        {(canManageTheme || canManageKnowledge || canManagePermission) && (
           <div
             className="relative mr-2"
             onMouseEnter={() => setIsSettingMenuOpen(true)}
@@ -128,6 +129,18 @@ export const AppLayout = () => {
                     }}
                   >
                     主题
+                  </button>
+                )}
+                {canManageKnowledge && (
+                  <button
+                    type="button"
+                    className="w-full rounded px-3 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800"
+                    onClick={() => {
+                      window.open('/settings?tab=knowledge', '_blank', 'noopener,noreferrer')
+                      setIsSettingMenuOpen(false)
+                    }}
+                  >
+                    知识库
                   </button>
                 )}
                 {canManagePermission && (

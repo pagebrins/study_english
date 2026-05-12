@@ -76,6 +76,9 @@ INSERT INTO permissions (code, name, description)
 SELECT 'settings.theme.manage', 'Theme Settings', 'Manage theme settings'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'settings.theme.manage');
 INSERT INTO permissions (code, name, description)
+SELECT 'settings.knowledge.manage', 'Knowledge Settings', 'Manage word knowledge base'
+WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'settings.knowledge.manage');
+INSERT INTO permissions (code, name, description)
 SELECT 'settings.permission.manage', 'Permission Settings', 'Manage permission settings'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'settings.permission.manage');
 

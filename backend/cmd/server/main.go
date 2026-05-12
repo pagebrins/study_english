@@ -38,6 +38,8 @@ func main() {
 	engine := router.Build(
 		repo,
 		cfg.JWTSecret,
+		cfg.WeChatMiniAppID,
+		cfg.WeChatMiniAppSecret,
 		cfg.LLMAPIKey,
 		cfg.LLMEndpoint,
 		cfg.LLMModelGenerate,

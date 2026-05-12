@@ -1,0 +1,15 @@
+<view class="page login-page">
+  <view class="hero-card login-card">
+    <text class="login-kicker">Study English</text>
+    <text class="login-title">把练习、复盘和 AI 讲解带进微信</text>
+    <text class="login-description">
+      首版小程序支持微信登录、模式选择、练习答题、历史记录和 AI 讲解。
+    </text>
+
+    <button class="primary-button" loading="{{loading}}" bindtap="onWechatLogin">
+      {{loading ? '登录中...' : '微信一键登录'}}
+    </button>
+
+    <text wx:if="{{error}}" class="error-text">{{error}}</text>
+  </view>
+</view>

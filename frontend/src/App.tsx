@@ -26,7 +26,7 @@ const App = () => {
       <Route
         path="/settings"
         element={
-          <PermissionRoute permissions={['settings.theme.manage', 'settings.permission.manage']}>
+          <PermissionRoute permissions={['settings.theme.manage', 'settings.knowledge.manage', 'settings.permission.manage']}>
             <ThemeSettingsPage />
           </PermissionRoute>
         }

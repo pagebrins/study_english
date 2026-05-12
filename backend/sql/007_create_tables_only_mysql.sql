@@ -87,6 +87,33 @@ CREATE TABLE IF NOT EXISTS themes (
   KEY idx_themes_level (level)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS words (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  word VARCHAR(120) NOT NULL,
+  definition TEXT NOT NULL,
+  l1_category VARCHAR(120) NOT NULL,
+  l2_category VARCHAR(120) NOT NULL DEFAULT '',
+  example TEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (word),
+  UNIQUE KEY uk_words_id (id),
+  KEY idx_words_l1_category (l1_category),
+  KEY idx_words_l2_category (l2_category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS word_tags (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  word_id BIGINT UNSIGNED NOT NULL,
+  category_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  category_name VARCHAR(120) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_word_tags_word_id (word_id),
+  KEY idx_word_tags_category_name (category_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS user_questions (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,

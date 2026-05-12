@@ -1,0 +1,34 @@
+.chat-head,
+.message-list,
+.composer {
+  padding: 30rpx;
+}
+
+.message-list,
+.composer {
+  margin-top: 24rpx;
+}
+
+.message {
+  max-width: 100%;
+  margin-bottom: 16rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 20rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+}
+
+.message.user {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.message.assistant {
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.message.system {
+  background: #f8fafc;
+  color: #475569;
+}

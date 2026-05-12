@@ -41,6 +41,8 @@ func New(driver, dbPath, mysqlDSN string) (*gorm.DB, error) {
 		&model.RolePermission{},
 		&model.UserRole{},
 		&model.Theme{},
+		&model.Word{},
+		&model.WordTag{},
 		&model.Mode{},
 		&model.UserQuestion{},
 		&model.PreGeneratedQuestion{},

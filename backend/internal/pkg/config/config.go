@@ -18,6 +18,8 @@ type Config struct {
 	DBPath                     string
 	MySQLDSN                   string
 	JWTSecret                  string
+	WeChatMiniAppID            string
+	WeChatMiniAppSecret        string
 	LLMAPIKey                  string
 	LLMEndpoint                string
 	LLMModelGenerate           string
@@ -90,6 +92,8 @@ func Load(configPath string) (Config, error) {
 		Port:                       port,
 		DBDriver:                   dbDriver,
 		JWTSecret:                  jwtSecret,
+		WeChatMiniAppID:            optionalEnvAny([]string{"WECHAT_MINIAPP_APP_ID"}),
+		WeChatMiniAppSecret:        optionalEnvAny([]string{"WECHAT_MINIAPP_APP_SECRET"}),
 		LLMAPIKey:                  optionalEnvAny([]string{"LLM_API_KEY", "DOUBAO_API_KEY"}),
 		LLMEndpoint:                llmEndpoint,
 		LLMModelGenerate:           llmModelGenerate,
