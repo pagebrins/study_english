@@ -36,8 +36,24 @@
       <text class="{{item.score >= 90 ? 'score-tag green' : 'score-tag'}}">{{item.score}} 分</text>
     </view>
     <text class="history-question">{{item.question}}</text>
+    <button
+      wx:if="{{item.question_pronunciation && item.question_pronunciation.audio_url}}"
+      class="secondary-button ask-button"
+      data-url="{{item.question_pronunciation.audio_url}}"
+      bindtap="playPronunciation"
+    >
+      播放英文题干
+    </button>
     <text class="history-answer">你的答案：{{item.answer_text || '未填写'}}</text>
     <text class="history-answer muted">标准答案：{{item.answer_key}}</text>
+    <button
+      wx:if="{{item.answer_key_pronunciation && item.answer_key_pronunciation.audio_url}}"
+      class="secondary-button ask-button"
+      data-url="{{item.answer_key_pronunciation.audio_url}}"
+      bindtap="playPronunciation"
+    >
+      播放英文答案
+    </button>
     <text class="history-time">{{item.create_time}}</text>
     <button class="secondary-button ask-button" data-index="{{index}}" bindtap="askAI">AI 讲解这题</button>
   </view>

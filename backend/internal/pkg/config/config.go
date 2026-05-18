@@ -13,28 +13,33 @@ import (
 
 // Config contains runtime settings.
 type Config struct {
-	Port                       string
-	DBDriver                   string
-	DBPath                     string
-	MySQLDSN                   string
-	JWTSecret                  string
-	WeChatMiniAppID            string
-	WeChatMiniAppSecret        string
-	LLMAPIKey                  string
-	LLMEndpoint                string
-	LLMModelGenerate           string
-	LLMModelAnalyze            string
-	LLMModelChat               string
-	LLMPromptFile              string
-	LLMAnalyzePromptFile       string
-	LLMAnalyzeRepairPromptFile string
-	LLMChatPromptFile          string
-	LLMStreamEnabled           bool
-	PreheatEnabled             bool
-	PreheatIntervalSec         int
-	PreheatServeTimeoutM       int
-	PreheatTargetWS            int
-	PreheatTargetArticle       int
+	Port                           string
+	DBDriver                       string
+	DBPath                         string
+	MySQLDSN                       string
+	JWTSecret                      string
+	WeChatMiniAppID                string
+	WeChatMiniAppSecret            string
+	WeChatWebAppID                 string
+	WeChatWebAppSecret             string
+	WeChatWebCallbackURL           string
+	WeChatWebFrontendLoginURL      string
+	LLMAPIKey                      string
+	LLMEndpoint                    string
+	LLMModelGenerate               string
+	LLMModelAnalyze                string
+	LLMModelChat                   string
+	LLMPromptFile                  string
+	LLMAnalyzePromptFile           string
+	LLMAnalyzeAssessmentPromptFile string
+	LLMAnalyzeRepairPromptFile     string
+	LLMChatPromptFile              string
+	LLMStreamEnabled               bool
+	PreheatEnabled                 bool
+	PreheatIntervalSec             int
+	PreheatServeTimeoutM           int
+	PreheatTargetWS                int
+	PreheatTargetArticle           int
 }
 
 // Load loads env vars from specified file with strict validation.
@@ -74,6 +79,10 @@ func Load(configPath string) (Config, error) {
 	}
 	llmPromptFile := requireEnv("LLM_PROMPT_FILE", &missing)
 	llmAnalyzePromptFile := requireEnv("LLM_ANALYZE_PROMPT_FILE", &missing)
+	llmAnalyzeAssessmentPromptFile := optionalEnvAny([]string{"LLM_ANALYZE_ASSESSMENT_PROMPT_FILE"})
+	if strings.TrimSpace(llmAnalyzeAssessmentPromptFile) == "" {
+		llmAnalyzeAssessmentPromptFile = "backend/prompts/analyze_assessment_batch.md"
+	}
 	llmAnalyzeRepairPromptFile := optionalEnvAny([]string{"LLM_ANALYZE_REPAIR_PROMPT_FILE"})
 	if strings.TrimSpace(llmAnalyzeRepairPromptFile) == "" {
 		llmAnalyzeRepairPromptFile = "backend/prompts/repair_analyze_output.md"
@@ -89,26 +98,31 @@ func Load(configPath string) (Config, error) {
 	preheatTargetWS := optionalIntEnv("PREHEAT_TARGET_WORD_SENTENCE", 100)
 	preheatTargetArticle := optionalIntEnv("PREHEAT_TARGET_ARTICLE", 3)
 	cfg := Config{
-		Port:                       port,
-		DBDriver:                   dbDriver,
-		JWTSecret:                  jwtSecret,
-		WeChatMiniAppID:            optionalEnvAny([]string{"WECHAT_MINIAPP_APP_ID"}),
-		WeChatMiniAppSecret:        optionalEnvAny([]string{"WECHAT_MINIAPP_APP_SECRET"}),
-		LLMAPIKey:                  optionalEnvAny([]string{"LLM_API_KEY", "DOUBAO_API_KEY"}),
-		LLMEndpoint:                llmEndpoint,
-		LLMModelGenerate:           llmModelGenerate,
-		LLMModelAnalyze:            llmModelAnalyze,
-		LLMModelChat:               llmModelChat,
-		LLMPromptFile:              llmPromptFile,
-		LLMAnalyzePromptFile:       llmAnalyzePromptFile,
-		LLMAnalyzeRepairPromptFile: llmAnalyzeRepairPromptFile,
-		LLMChatPromptFile:          llmChatPromptFile,
-		LLMStreamEnabled:           llmStreamEnabled,
-		PreheatEnabled:             preheatEnabled,
-		PreheatIntervalSec:         preheatIntervalSec,
-		PreheatServeTimeoutM:       preheatServeTimeoutM,
-		PreheatTargetWS:            preheatTargetWS,
-		PreheatTargetArticle:       preheatTargetArticle,
+		Port:                           port,
+		DBDriver:                       dbDriver,
+		JWTSecret:                      jwtSecret,
+		WeChatMiniAppID:                optionalEnvAny([]string{"WECHAT_MINIAPP_APP_ID"}),
+		WeChatMiniAppSecret:            optionalEnvAny([]string{"WECHAT_MINIAPP_APP_SECRET"}),
+		WeChatWebAppID:                 optionalEnvAny([]string{"WECHAT_WEB_APP_ID"}),
+		WeChatWebAppSecret:             optionalEnvAny([]string{"WECHAT_WEB_APP_SECRET"}),
+		WeChatWebCallbackURL:           optionalEnvAny([]string{"WECHAT_WEB_CALLBACK_URL"}),
+		WeChatWebFrontendLoginURL:      optionalEnvAny([]string{"WECHAT_WEB_FRONTEND_LOGIN_URL"}),
+		LLMAPIKey:                      optionalEnvAny([]string{"LLM_API_KEY", "DOUBAO_API_KEY"}),
+		LLMEndpoint:                    llmEndpoint,
+		LLMModelGenerate:               llmModelGenerate,
+		LLMModelAnalyze:                llmModelAnalyze,
+		LLMModelChat:                   llmModelChat,
+		LLMPromptFile:                  llmPromptFile,
+		LLMAnalyzePromptFile:           llmAnalyzePromptFile,
+		LLMAnalyzeAssessmentPromptFile: llmAnalyzeAssessmentPromptFile,
+		LLMAnalyzeRepairPromptFile:     llmAnalyzeRepairPromptFile,
+		LLMChatPromptFile:              llmChatPromptFile,
+		LLMStreamEnabled:               llmStreamEnabled,
+		PreheatEnabled:                 preheatEnabled,
+		PreheatIntervalSec:             preheatIntervalSec,
+		PreheatServeTimeoutM:           preheatServeTimeoutM,
+		PreheatTargetWS:                preheatTargetWS,
+		PreheatTargetArticle:           preheatTargetArticle,
 	}
 	switch cfg.DBDriver {
 	case "mysql":

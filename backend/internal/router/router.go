@@ -21,6 +21,10 @@ func Build(
 	jwtSecret,
 	wechatMiniAppID,
 	wechatMiniAppSecret,
+	wechatWebAppID,
+	wechatWebAppSecret,
+	wechatWebCallbackURL,
+	wechatWebFrontendLoginURL,
 	llmAPIKey,
 	llmEndpoint,
 	llmModelGenerate,
@@ -28,6 +32,7 @@ func Build(
 	llmModelChat,
 	llmPromptFile,
 	llmAnalyzePromptFile string,
+	llmAnalyzeAssessmentPromptFile string,
 	llmAnalyzeRepairPromptFile string,
 	llmChatPromptFile string,
 	llmStreamEnabled bool,
@@ -53,10 +58,20 @@ func Build(
 		MaxAge:           12 * time.Hour,
 	}))
 
-	authService := service.NewAuthService(repo, jwtSecret, wechatMiniAppID, wechatMiniAppSecret)
+	authService := service.NewAuthService(
+		repo,
+		jwtSecret,
+		wechatMiniAppID,
+		wechatMiniAppSecret,
+		wechatWebAppID,
+		wechatWebAppSecret,
+		wechatWebCallbackURL,
+		wechatWebFrontendLoginURL,
+	)
 	modeService := service.NewModeService(repo)
 	themeService := service.NewThemeService(repo)
 	wordService := service.NewWordService(repo)
+	pronunciationService := service.NewPronunciationService()
 	permissionService := service.NewPermissionService(repo)
 	questionService := service.NewQuestionService(
 		repo,
@@ -67,6 +82,7 @@ func Build(
 		llmModelChat,
 		llmPromptFile,
 		llmAnalyzePromptFile,
+		llmAnalyzeAssessmentPromptFile,
 		llmAnalyzeRepairPromptFile,
 		llmChatPromptFile,
 		llmStreamEnabled,
@@ -76,12 +92,15 @@ func Build(
 		preheatTargetWS,
 		preheatTargetArticle,
 	)
+	learningPlanService := service.NewLearningPlanService(repo, questionService)
 	scoreService := service.NewScoreService(repo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	modeHandler := handler.NewModeHandler(modeService)
 	themeHandler := handler.NewThemeHandler(themeService)
 	wordHandler := handler.NewWordHandler(wordService)
+	pronunciationHandler := handler.NewPronunciationHandler(pronunciationService)
+	learningPlanHandler := handler.NewLearningPlanHandler(learningPlanService)
 	permissionHandler := handler.NewPermissionHandler(permissionService)
 	questionHandler := handler.NewQuestionHandler(questionService)
 	scoreHandler := handler.NewScoreHandler(scoreService)
@@ -91,6 +110,8 @@ func Build(
 	authGroup.POST("/register", authHandler.Register)
 	authGroup.POST("/login", authHandler.Login)
 	authGroup.POST("/wechat-mini-login", authHandler.WechatMiniLogin)
+	authGroup.GET("/wechat-web/start", authHandler.WechatWebStart)
+	authGroup.GET("/wechat-web/callback", authHandler.WechatWebCallback)
 	authGroup.POST("/reset-password", authHandler.ResetPassword)
 
 	protected := v1.Group("")
@@ -104,6 +125,12 @@ func Build(
 	protected.GET("/themes", themeHandler.List)
 	protected.GET("/words", wordHandler.List)
 	protected.GET("/words/export", wordHandler.Export)
+	protected.POST("/pronunciations", pronunciationHandler.Build)
+	protected.GET("/pronunciations/stream", pronunciationHandler.Stream)
+	protected.GET("/learning-plans/current", learningPlanHandler.Current)
+	protected.POST("/learning-plans/generate", learningPlanHandler.GeneratePlan)
+	protected.POST("/learning-profiles/goal", learningPlanHandler.SetGoal)
+	protected.POST("/learning-assessments/submit", learningPlanHandler.SubmitAssessment)
 	settingsGroup := protected.Group("")
 	settingsGroup.Use(middleware.RequirePermission(authz.PermSettingsThemeManage))
 	settingsGroup.POST("/themes", themeHandler.Create)

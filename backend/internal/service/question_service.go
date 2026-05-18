@@ -21,35 +21,54 @@ import (
 
 // GeneratedQuestion is LLM generation response.
 type GeneratedQuestion struct {
-	Question       string `json:"question"`
-	AnswerKey      string `json:"answer_key"`
-	PreGeneratedID *uint  `json:"pre_generated_id,omitempty"`
+	Question               string               `json:"question"`
+	AnswerKey              string               `json:"answer_key"`
+	PreGeneratedID         *uint                `json:"pre_generated_id,omitempty"`
+	QuestionPronunciation  *model.Pronunciation `json:"question_pronunciation,omitempty"`
+	AnswerKeyPronunciation *model.Pronunciation `json:"answer_key_pronunciation,omitempty"`
+}
+
+type BatchAssessmentAnalyzeItem struct {
+	ItemID          uint   `json:"item_id"`
+	StudyType       int    `json:"study_type"`
+	TranslationMode int    `json:"translation_mode"`
+	SourceLanguage  string `json:"source_language"`
+	TargetLanguage  string `json:"target_language"`
+	Question        string `json:"question"`
+	AnswerText      string `json:"answer_text"`
+	AnswerKey       string `json:"answer_key"`
+}
+
+type BatchAssessmentAnalyzeResult struct {
+	ItemID uint     `json:"item_id"`
+	Issues []string `json:"issues"`
 }
 
 // QuestionService handles question business logic.
 type QuestionService struct {
-	repo                    *repository.Repository
-	apiKey                  string
-	endpoint                string
-	generateModel           string
-	analyzeModel            string
-	chatModel               string
-	promptFile              string
-	analyzePromptFile       string
-	analyzeRepairPromptFile string
-	chatPromptFile          string
-	streamEnabled           bool
-	generateLLM             *llmclient.Client
-	analyzeLLM              *llmclient.Client
-	chatLLM                 *llmclient.Client
-	preheatEnabled          bool
-	preheatInterval         time.Duration
-	preheatTimeout          time.Duration
-	preheatTargetWS         int
-	preheatTargetArt        int
-	chatSessionMu           sync.Mutex
-	chatSessions            map[string][]chatMessageRecord
-	chatSessionAccess       map[string]time.Time
+	repo                        *repository.Repository
+	apiKey                      string
+	endpoint                    string
+	generateModel               string
+	analyzeModel                string
+	chatModel                   string
+	promptFile                  string
+	analyzePromptFile           string
+	analyzeAssessmentPromptFile string
+	analyzeRepairPromptFile     string
+	chatPromptFile              string
+	streamEnabled               bool
+	generateLLM                 *llmclient.Client
+	analyzeLLM                  *llmclient.Client
+	chatLLM                     *llmclient.Client
+	preheatEnabled              bool
+	preheatInterval             time.Duration
+	preheatTimeout              time.Duration
+	preheatTargetWS             int
+	preheatTargetArt            int
+	chatSessionMu               sync.Mutex
+	chatSessions                map[string][]chatMessageRecord
+	chatSessionAccess           map[string]time.Time
 }
 
 type QuestionListParams struct {
@@ -136,6 +155,7 @@ func NewQuestionService(
 	chatModel,
 	promptFile,
 	analyzePromptFile string,
+	analyzeAssessmentPromptFile string,
 	analyzeRepairPromptFile string,
 	chatPromptFile string,
 	streamEnabled bool,
@@ -149,27 +169,28 @@ func NewQuestionService(
 	analyzeClient := initQuestionLLMClient(endpoint, analyzeModel, apiKey, llmTaskAnalyze)
 	chatClient := initQuestionLLMClient(endpoint, chatModel, apiKey, llmTaskChat)
 	service := &QuestionService{
-		repo:                    repo,
-		apiKey:                  apiKey,
-		endpoint:                endpoint,
-		generateModel:           generateModel,
-		analyzeModel:            analyzeModel,
-		chatModel:               chatModel,
-		promptFile:              promptFile,
-		analyzePromptFile:       analyzePromptFile,
-		analyzeRepairPromptFile: analyzeRepairPromptFile,
-		chatPromptFile:          chatPromptFile,
-		streamEnabled:           streamEnabled,
-		generateLLM:             generateClient,
-		analyzeLLM:              analyzeClient,
-		chatLLM:                 chatClient,
-		preheatEnabled:          preheatEnabled,
-		preheatInterval:         withDefaultDuration(time.Duration(preheatIntervalSec)*time.Second, defaultPreheatInterval),
-		preheatTimeout:          withDefaultDuration(time.Duration(preheatServeTimeoutM)*time.Minute, defaultPreheatTimeout),
-		preheatTargetWS:         withDefaultInt(preheatTargetWS, defaultPreheatTargetWS),
-		preheatTargetArt:        withDefaultInt(preheatTargetArticle, defaultPreheatTargetArt),
-		chatSessions:            make(map[string][]chatMessageRecord),
-		chatSessionAccess:       make(map[string]time.Time),
+		repo:                        repo,
+		apiKey:                      apiKey,
+		endpoint:                    endpoint,
+		generateModel:               generateModel,
+		analyzeModel:                analyzeModel,
+		chatModel:                   chatModel,
+		promptFile:                  promptFile,
+		analyzePromptFile:           analyzePromptFile,
+		analyzeAssessmentPromptFile: analyzeAssessmentPromptFile,
+		analyzeRepairPromptFile:     analyzeRepairPromptFile,
+		chatPromptFile:              chatPromptFile,
+		streamEnabled:               streamEnabled,
+		generateLLM:                 generateClient,
+		analyzeLLM:                  analyzeClient,
+		chatLLM:                     chatClient,
+		preheatEnabled:              preheatEnabled,
+		preheatInterval:             withDefaultDuration(time.Duration(preheatIntervalSec)*time.Second, defaultPreheatInterval),
+		preheatTimeout:              withDefaultDuration(time.Duration(preheatServeTimeoutM)*time.Minute, defaultPreheatTimeout),
+		preheatTargetWS:             withDefaultInt(preheatTargetWS, defaultPreheatTargetWS),
+		preheatTargetArt:            withDefaultInt(preheatTargetArticle, defaultPreheatTargetArt),
+		chatSessions:                make(map[string][]chatMessageRecord),
+		chatSessionAccess:           make(map[string]time.Time),
 	}
 	service.startPreheatTicker()
 	return service
@@ -235,6 +256,7 @@ func (s *QuestionService) Generate(requestID string, userID, modeID uint) ([]Gen
 		logger.L().Error("llm generate empty result", zap.String("request_id", requestID))
 		return nil, errors.New("llm returned empty questions")
 	}
+	enrichGeneratedQuestions(generated)
 	logger.L().Info("llm generate completed",
 		zap.String("request_id", requestID),
 		zap.Int64("generate_latency_ms", time.Since(startedAt).Milliseconds()),
@@ -271,11 +293,16 @@ func (s *QuestionService) GenerateStream(
 		logger.L().Error("llm generate stream failed get mode", zap.String("request_id", requestID), zap.Error(err))
 		return nil, errors.New("mode not found")
 	}
-	return s.generateWithPreheat(ctx, requestID, userID, mode, onToken, onMeta)
+	items, err := s.generateWithPreheat(ctx, requestID, userID, mode, onToken, onMeta)
+	if err != nil {
+		return nil, err
+	}
+	enrichGeneratedQuestions(items)
+	return items, nil
 }
 
 func (s *QuestionService) List(requestID string, userID uint, params QuestionListParams) ([]model.UserQuestion, error) {
-	return s.repo.ListQuestions(
+	items, err := s.repo.ListQuestions(
 		requestID,
 		userID,
 		params.StartDate,
@@ -286,6 +313,11 @@ func (s *QuestionService) List(requestID string, userID uint, params QuestionLis
 		params.MinScore,
 		params.MaxScore,
 	)
+	if err != nil {
+		return nil, err
+	}
+	enrichQuestionHistoryWithPronunciation(items)
+	return items, nil
 }
 func (s *QuestionService) Create(requestID string, question *model.UserQuestion) error {
 	question.CreateTime = time.Now()
@@ -295,6 +327,20 @@ func (s *QuestionService) Create(requestID string, question *model.UserQuestion)
 	if question.PreGeneratedID != nil {
 		if err := s.repo.DeleteServedPreGeneratedQuestion(requestID, *question.PreGeneratedID, question.UserID, question.ModeID); err != nil {
 			return err
+		}
+	}
+	profile, err := s.repo.GetLearningProfileByUser(requestID, question.UserID)
+	if err == nil && profile != nil && profile.OnboardingCompleted {
+		dayStart := beginningOfDay(question.CreateTime)
+		dayEnd := dayStart.Add(24 * time.Hour)
+		total, fullScore, perfErr := s.repo.GetTodayQuestionPerformance(requestID, question.UserID, dayStart, dayEnd)
+		if perfErr == nil && total >= 10 {
+			nextDay := dayStart.Add(24 * time.Hour)
+			if fullScore*100/total >= 90 {
+				_ = s.repo.ScheduleNextAssessment(requestID, profile.ID, assessmentTypeUpgrade, nextDay)
+			} else if (total-fullScore)*100/total >= 90 {
+				_ = s.repo.ScheduleNextAssessment(requestID, profile.ID, assessmentTypeDowngrade, nextDay)
+			}
 		}
 	}
 	return nil
@@ -348,6 +394,98 @@ func (s *QuestionService) AnalyzeAnswer(requestID string, userID, modeID uint, q
 		return []string{}, nil
 	}
 	return issues, nil
+}
+
+func (s *QuestionService) GenerateDirectQuestions(
+	requestID string,
+	level, numbers, studyType, translationMode int,
+	customRequirements []string,
+) ([]GeneratedQuestion, error) {
+	items, err := s.runGenerateRounds(
+		context.Background(),
+		requestID,
+		level,
+		numbers,
+		studyType,
+		translationMode,
+		customRequirements,
+		map[string]struct{}{},
+		nil,
+		nil,
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+	enrichGeneratedQuestions(items)
+	return items, nil
+}
+
+func (s *QuestionService) AnalyzeDirectAnswer(
+	requestID string,
+	question, answerText, answerKey string,
+	studyType, translationMode int,
+) ([]string, int, error) {
+	if s.endpoint == "" || s.analyzeModel == "" {
+		return nil, 0, errors.New("llm is not configured: please set LLM_ENDPOINT and LLM_MODEL_ANALYZE_ANSWER")
+	}
+	prompt, err := s.buildAnalyzePrompt(question, answerText, answerKey, studyType, translationMode)
+	if err != nil {
+		return nil, 0, err
+	}
+	content, err := s.callLLMRawContent(context.Background(), requestID, llmTaskAnalyze, prompt, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+	issues, parseErr := parseAnalyzeOutputSafely(content)
+	if parseErr != nil {
+		issues, parseErr = s.retryParseAnalyzeOutput(context.Background(), requestID, prompt, content)
+		if parseErr != nil {
+			return nil, 0, parseErr
+		}
+	}
+	score := 100
+	if len(issues) > 0 {
+		score = maxInt(40, 100-len(issues)*15)
+	}
+	return issues, score, nil
+}
+
+func (s *QuestionService) AnalyzeAssessmentBatch(
+	requestID string,
+	items []BatchAssessmentAnalyzeItem,
+) (map[uint]BatchAssessmentAnalyzeResult, error) {
+	if s.endpoint == "" || s.analyzeModel == "" {
+		return nil, errors.New("llm is not configured: please set LLM_ENDPOINT and LLM_MODEL_ANALYZE_ANSWER")
+	}
+	if len(items) == 0 {
+		return map[uint]BatchAssessmentAnalyzeResult{}, nil
+	}
+	prompt, err := s.buildAnalyzeAssessmentBatchPrompt(items)
+	if err != nil {
+		return nil, err
+	}
+	content, err := s.callLLMContent(context.Background(), requestID, llmTaskAnalyze, prompt, nil)
+	if err != nil {
+		return nil, err
+	}
+	results, err := parseBatchAssessmentAnalyzeResults(content)
+	if err != nil {
+		return nil, err
+	}
+	resultByID := make(map[uint]BatchAssessmentAnalyzeResult, len(results))
+	for _, result := range results {
+		if result.Issues == nil {
+			result.Issues = []string{}
+		}
+		resultByID[result.ItemID] = result
+	}
+	for _, item := range items {
+		if _, ok := resultByID[item.ItemID]; !ok {
+			return nil, fmt.Errorf("batch assessment result missing item_id=%d", item.ItemID)
+		}
+	}
+	return resultByID, nil
 }
 
 func (s *QuestionService) ExplainChat(
@@ -1026,6 +1164,20 @@ func (s *QuestionService) buildAnalyzePrompt(
 	return prompt, nil
 }
 
+func (s *QuestionService) buildAnalyzeAssessmentBatchPrompt(items []BatchAssessmentAnalyzeItem) (string, error) {
+	content, err := os.ReadFile(s.analyzeAssessmentPromptFile)
+	if err != nil {
+		return "", fmt.Errorf("read analyze assessment prompt file failed: %w", err)
+	}
+	payload, err := json.Marshal(items)
+	if err != nil {
+		return "", fmt.Errorf("marshal assessment items failed: %w", err)
+	}
+	prompt := string(content)
+	prompt = strings.ReplaceAll(prompt, "{{assessment_items_json}}", string(payload))
+	return prompt, nil
+}
+
 func studyTypeLabel(studyType int) string {
 	switch studyType {
 	case studyTypeWord:
@@ -1049,6 +1201,18 @@ func translationLanguagePair(translationMode int) (string, string) {
 		return "英文", "中文"
 	}
 	return "中文", "英文"
+}
+
+func parseBatchAssessmentAnalyzeResults(text string) ([]BatchAssessmentAnalyzeResult, error) {
+	rawJSON := extractLikelyJSON(strings.TrimSpace(text))
+	if rawJSON == "" {
+		rawJSON = strings.TrimSpace(text)
+	}
+	var results []BatchAssessmentAnalyzeResult
+	if err := json.Unmarshal([]byte(rawJSON), &results); err != nil {
+		return nil, err
+	}
+	return results, nil
 }
 
 func (s *QuestionService) resolveChatQuestion(

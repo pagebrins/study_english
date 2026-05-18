@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { useAuth } from '../hooks/useAuth'
+import { authApi } from '../services/auth'
 
 /**
  * Login and register page.
@@ -17,7 +18,25 @@ export const AuthPage = () => {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [localMessage, setLocalMessage] = useState('')
-  const { token, loading, error, login, register, resetPassword } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { token, loading, error, login, loginWithToken, register, resetPassword } = useAuth()
+
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const wechatToken = hashParams.get('wechat_token') ?? searchParams.get('wechat_token')
+    const wechatError = hashParams.get('wechat_error') ?? searchParams.get('wechat_error')
+    if (wechatToken) {
+      loginWithToken(wechatToken)
+      window.history.replaceState(null, '', window.location.pathname)
+      setSearchParams({}, { replace: true })
+      return
+    }
+    if (wechatError) {
+      setLocalMessage(wechatError)
+      window.history.replaceState(null, '', window.location.pathname)
+      setSearchParams({}, { replace: true })
+    }
+  }, [loginWithToken, searchParams, setSearchParams])
 
   if (token) return <Navigate to="/" replace />
 
@@ -44,6 +63,10 @@ export const AuthPage = () => {
       return
     }
     await login({ email, password })
+  }
+
+  const startWechatLogin = () => {
+    window.location.href = authApi.getWechatWebLoginURL()
   }
 
   return (
@@ -74,6 +97,11 @@ export const AuthPage = () => {
         <Button className="w-full" onClick={submit} disabled={loading}>
           {loading ? 'Loading...' : isResetMode ? 'Reset password' : isRegister ? 'Create account' : 'Sign in'}
         </Button>
+        {!isRegister && !isResetMode && (
+          <Button variant="outline" className="w-full" onClick={startWechatLogin} disabled={loading}>
+            WeChat Scan Login
+          </Button>
+        )}
         <Button
           variant="ghost"
           className="w-full"

@@ -1,8 +1,14 @@
+import { learningPlanService } from '../../services/learningPlan'
 import { questionService } from '../../services/question'
 import { requireLogin } from '../../utils/guard'
+import { miniappConfig } from '../../utils/config'
 import { getSelectedMode, setExplainContext } from '../../utils/session'
 import type { GeneratedQuestion } from '../../types/question'
 import type { StudyMode } from '../../types/mode'
+
+let pronunciationPlayer: WechatMiniprogram.InnerAudioContext | null = null
+const resolveAudioURL = (url: string) =>
+  /^https?:\/\//i.test(url) ? url : `${miniappConfig.apiBaseUrl}${url.startsWith('/') ? url : `/${url}`}`
 
 type PracticeData = {
   mode: StudyMode | null
@@ -26,8 +32,27 @@ Page<PracticeData>({
   },
   onShow() {
     if (!requireLogin()) return
-    const mode = getSelectedMode()
-    this.setData({ mode })
+    void this.ensureLearningReady()
+  },
+  async ensureLearningReady() {
+    try {
+      const learningStatus = await learningPlanService.current()
+      if (learningStatus.goal_required || learningStatus.assessment_required) {
+        wx.showModal({
+          title: '先完成学习设置',
+          content: '你还没有完成学习目标或水平测试，系统将带你去设置页继续。',
+          showCancel: false,
+          success: () => wx.switchTab({ url: '/pages/modes/index' }),
+        })
+        return
+      }
+      const mode = getSelectedMode()
+      this.setData({ mode })
+    } catch (error) {
+      this.setData({
+        error: error instanceof Error ? error.message : '加载学习状态失败',
+      })
+    }
   },
   async generateQuestions() {
     const { mode, loading } = this.data
@@ -94,6 +119,15 @@ Page<PracticeData>({
       this.setData({ submitting: false })
     }
   },
+  playPronunciation(event: WechatMiniprogram.CustomEvent<{ url: string }>) {
+    const url = String(event.currentTarget.dataset.url || '')
+    if (!url) return
+    if (!pronunciationPlayer) {
+      pronunciationPlayer = wx.createInnerAudioContext()
+    }
+    pronunciationPlayer.src = resolveAudioURL(url)
+    pronunciationPlayer.play()
+  },
   goChat() {
     this.syncExplainContext()
     wx.navigateTo({ url: '/pages/chat/index?source=practice' })
@@ -113,5 +147,8 @@ Page<PracticeData>({
         user_answer: this.data.answers[index] ?? '',
       })),
     })
+  },
+  onUnload() {
+    pronunciationPlayer?.stop()
   },
 })

@@ -7,10 +7,13 @@ type AuthState = {
   token: string
   loading: boolean
   error: string
+  shouldPromptOnboarding: boolean
   login: (payload: LoginPayload) => Promise<void>
+  loginWithToken: (token: string) => void
   register: (payload: RegisterPayload) => Promise<void>
   resetPassword: (payload: ResetPasswordPayload) => Promise<void>
   fetchMe: () => Promise<void>
+  markOnboardingPromptHandled: () => void
   logout: () => void
 }
 
@@ -21,22 +24,27 @@ export const useAuthStore = create<AuthState>((set) => ({
   token,
   loading: false,
   error: '',
+  shouldPromptOnboarding: false,
   login: async (payload) => {
     set({ loading: true, error: '' })
     try {
       const result = await authApi.login(payload)
       localStorage.setItem('token', result.token)
-      set({ token: result.token, user: result.user, loading: false })
+      set({ token: result.token, user: result.user, loading: false, shouldPromptOnboarding: true })
     } catch (error) {
       set({ error: (error as Error).message, loading: false })
     }
+  },
+  loginWithToken: (nextToken) => {
+    localStorage.setItem('token', nextToken)
+    set({ token: nextToken, user: null, error: '', loading: false, shouldPromptOnboarding: true })
   },
   register: async (payload) => {
     set({ loading: true, error: '' })
     try {
       const result = await authApi.register(payload)
       localStorage.setItem('token', result.token)
-      set({ token: result.token, user: result.user, loading: false })
+      set({ token: result.token, user: result.user, loading: false, shouldPromptOnboarding: true })
     } catch (error) {
       set({ error: (error as Error).message, loading: false })
     }
@@ -57,11 +65,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: await authApi.me() })
     } catch {
       localStorage.removeItem('token')
-      set({ user: null, token: '' })
+      set({ user: null, token: '', shouldPromptOnboarding: false })
     }
   },
+  markOnboardingPromptHandled: () => set({ shouldPromptOnboarding: false }),
   logout: () => {
     localStorage.removeItem('token')
-    set({ user: null, token: '', error: '' })
+    set({ user: null, token: '', error: '', shouldPromptOnboarding: false })
   },
 }))

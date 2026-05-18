@@ -1,405 +1,287 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { PronunciationButton } from '../components/PronunciationButton'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { categoryLabel, translationModeLabel } from '../constants/study'
-import { useModes } from '../hooks/useModes'
 import { useStudyCategory } from '../hooks/useStudyCategory'
-import { useThemes } from '../hooks/useThemes'
-import type { Theme } from '../types/theme'
+import { learningPlanApi } from '../services/learningPlan'
+import type { LearningPlanBundle } from '../types/learningPlan'
 
-type ModeForm = {
-  name: string
-  description: string
-  level: string
-  numbers: string
-  type: number
-  mode: number
-  themeLevel1ID?: number
-  themeLevel2ID?: number
-  themeLevel3ID?: number
-  requirements: string[]
+const assessmentTypeLabel: Record<string, string> = {
+  initial: '初始水平测试',
+  upgrade: '提高难度测试',
+  downgrade: '降低难度测试',
 }
 
-const initial: ModeForm = { name: '', description: '', level: '', numbers: '', type: 2, mode: 1, requirements: [] }
-
-/**
- * Study mode CRUD page.
- */
 export const ModesPage = () => {
+  const navigate = useNavigate()
   const { currentCategory, currentType } = useStudyCategory()
-  const { items, error, fetch, create, update, remove } = useModes()
-  const { allItems: themes, fetchAll: fetchThemes } = useThemes()
-  const [form, setForm] = useState(initial)
-  const [editingID, setEditingID] = useState(0)
-  const [formError, setFormError] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [requirementCount, setRequirementCount] = useState(1)
+  const [bundle, setBundle] = useState<LearningPlanBundle>({
+    assessment_items: [],
+    items: [],
+    goal_required: false,
+    assessment_required: false,
+    plan_generation_required: false,
+  })
+  const [goal, setGoal] = useState('')
+  const [dailyMinutes, setDailyMinutes] = useState(20)
+  const [studyTimeRange, setStudyTimeRange] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [savingGoal, setSavingGoal] = useState(false)
+  const [submittingAssessment, setSubmittingAssessment] = useState(false)
+  const [generatingPlan, setGeneratingPlan] = useState(false)
+  const [error, setError] = useState('')
+  const [answers, setAnswers] = useState<Record<number, string>>({})
+
+  const loadStatus = async () => {
+    setLoading(true)
+    try {
+      const current = await learningPlanApi.current()
+      setBundle(current)
+      setGoal(current.profile?.goal ?? '')
+      setDailyMinutes(current.profile?.daily_minutes ?? 20)
+      setStudyTimeRange(current.profile?.study_time_range ?? '')
+      setAnswers(
+        Object.fromEntries(current.assessment_items.map((item) => [item.id, item.user_answer ?? ''])),
+      )
+      setError('')
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    void fetch({ type: currentType })
-  }, [currentType, fetch])
+    void loadStatus()
+  }, [])
 
-  useEffect(() => {
-    void fetchThemes()
-  }, [fetchThemes])
-
-  const themesByID = useMemo(() => {
-    const map = new Map<number, Theme>()
-    for (const item of themes) map.set(item.id, item)
-    return map
-  }, [themes])
-
-  const level1Themes = useMemo(() => themes.filter((item) => item.level === 1), [themes])
-  const level2Themes = useMemo(
-    () => themes.filter((item) => item.level === 2 && item.parent_id === form.themeLevel1ID),
-    [form.themeLevel1ID, themes],
-  )
-  const level3Themes = useMemo(
-    () => themes.filter((item) => item.level === 3 && item.parent_id === form.themeLevel2ID),
-    [form.themeLevel2ID, themes],
+  const categoryItems = useMemo(
+    () => bundle.items.filter((item) => item.study_type === currentType),
+    [bundle.items, currentType],
   )
 
-  const resetModal = () => {
-    setForm({ ...initial, type: currentType })
-    setEditingID(0)
-    setFormError('')
-    setIsModalOpen(false)
-    setRequirementCount(1)
-  }
-
-  const openCreateModal = () => {
-    setForm({ ...initial, type: currentType })
-    setEditingID(0)
-    setFormError('')
-    setIsModalOpen(true)
-    setRequirementCount(1)
-  }
-
-  const resolveThemeSelection = (themeID?: number) => {
-    if (!themeID) {
-      return { themeLevel1ID: undefined, themeLevel2ID: undefined, themeLevel3ID: undefined }
-    }
-    const current = themesByID.get(themeID)
-    if (!current) {
-      return { themeLevel1ID: undefined, themeLevel2ID: undefined, themeLevel3ID: undefined }
-    }
-    if (current.level === 1) {
-      return { themeLevel1ID: current.id, themeLevel2ID: undefined, themeLevel3ID: undefined }
-    }
-    if (current.level === 2) {
-      return { themeLevel1ID: current.parent_id, themeLevel2ID: current.id, themeLevel3ID: undefined }
-    }
-    const parentLevel2 = current.parent_id ? themesByID.get(current.parent_id) : undefined
-    return {
-      themeLevel1ID: parentLevel2?.parent_id,
-      themeLevel2ID: parentLevel2?.id,
-      themeLevel3ID: current.id,
+  const submitGoal = async () => {
+    setSavingGoal(true)
+    try {
+      const next = await learningPlanApi.setGoal({
+        goal,
+        daily_minutes: Math.max(1, dailyMinutes),
+        study_time_range: studyTimeRange,
+      })
+      setBundle(next)
+      setGoal(next.profile?.goal ?? goal)
+      setDailyMinutes(next.profile?.daily_minutes ?? dailyMinutes)
+      setStudyTimeRange(next.profile?.study_time_range ?? studyTimeRange)
+      setAnswers(
+        Object.fromEntries(next.assessment_items.map((item) => [item.id, item.user_answer ?? ''])),
+      )
+      setError('')
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setSavingGoal(false)
     }
   }
 
-  const openEditModal = (mode: (typeof items)[number]) => {
-    setForm({
-      name: mode.name,
-      description: mode.description,
-      level: String(mode.level),
-      numbers: String(mode.numbers),
-      type: mode.type,
-      mode: mode.mode || 1,
-      ...resolveThemeSelection(mode.theme_id),
-      requirements: mode.requirements ?? [],
-    })
-    setEditingID(mode.id)
-    setFormError('')
-    setIsModalOpen(true)
-    setRequirementCount(Math.max(1, Math.min(3, (mode.requirements ?? []).length)))
+  const submitAssessment = async () => {
+    if (!bundle.assessment) return
+    setSubmittingAssessment(true)
+    try {
+      const next = await learningPlanApi.submitAssessment({
+        assessment_id: bundle.assessment.id,
+        answers: bundle.assessment_items.map((item) => ({
+          item_id: item.id,
+          user_answer: answers[item.id] ?? '',
+        })),
+      })
+      setBundle(next)
+      setAnswers({})
+      setError('')
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setSubmittingAssessment(false)
+    }
   }
 
-  const submit = async () => {
-    if (!form.name.trim()) {
-      setFormError('Name is required.')
-      return
+  const generatePlan = async () => {
+    setGeneratingPlan(true)
+    try {
+      const next = await learningPlanApi.generate()
+      setBundle(next)
+      setError('')
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setGeneratingPlan(false)
     }
-    if (!form.level.trim()) {
-      setFormError('Level is required.')
-      return
-    }
-    if (!form.numbers.trim()) {
-      setFormError('Nums is required.')
-      return
-    }
-    const parsedLevel = Number(form.level)
-    if (!Number.isInteger(parsedLevel) || parsedLevel < 1 || parsedLevel > 10) {
-      setFormError('Level must be between 1 and 10.')
-      return
-    }
-    const parsedNumbers = Number(form.numbers)
-    if (!Number.isInteger(parsedNumbers) || parsedNumbers < 1) {
-      setFormError('Nums must be at least 1.')
-      return
-    }
-    const normalizedRequirements = form.requirements
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
-    if (normalizedRequirements.length > 3) {
-      setFormError('Requirements must be <= 3 items.')
-      return
-    }
-    if (normalizedRequirements.some((item) => item.length > 200)) {
-      setFormError('Each requirement must be <= 200 characters.')
-      return
-    }
-    setFormError('')
-    const payload = {
-      name: form.name.trim(),
-      description: form.description.trim(),
-      level: parsedLevel,
-      numbers: parsedNumbers,
-      type: currentType,
-      mode: form.mode,
-      theme_id: form.themeLevel3ID ?? form.themeLevel2ID ?? form.themeLevel1ID,
-      requirements: normalizedRequirements,
-    }
-    if (editingID) {
-      await update(editingID, payload)
-    } else {
-      await create(payload)
-    }
-    resetModal()
-  }
-
-  const updateRequirement = (index: number, value: string) => {
-    const next = [...form.requirements]
-    next[index] = value
-    setForm({ ...form, requirements: next })
-  }
-
-  const removeRequirement = (index: number) => {
-    if (index < 1 || index >= requirementCount) return
-    const next = [...form.requirements]
-    if (index === 1 && requirementCount === 3) {
-      next[1] = next[2] ?? ''
-      next[2] = ''
-    } else {
-      next[index] = ''
-    }
-    setForm({ ...form, requirements: next })
-    setRequirementCount((prev) => Math.max(1, prev - 1))
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Study Modes · {categoryLabel[currentCategory]}</h1>
-        <Button onClick={openCreateModal}>Create Mode</Button>
-      </div>
-      {error && <p className="text-sm text-red-400">{error}</p>}
-      <div className="space-y-2">
-        {items.map((mode) => (
-          <Card key={mode.id} className="flex items-start justify-between">
-            <div className="space-y-1">
-              <div className="flex items-start gap-40">
-                <p className="break-words font-medium">{mode.name}</p>
-                {mode.requirements?.length ? (
-                  <div className="space-y-1 text-xs text-zinc-300">
-                    {mode.requirements.slice(0, 3).map((requirement, index) => (
-                      <p key={`${mode.id}-${index}`} className="break-words">
-                        {requirement}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              <p className="text-xs text-zinc-500">Level {mode.level} · {mode.numbers}/day</p>
-              <p className="text-xs text-zinc-500">{translationModeLabel[mode.mode] ?? ''}</p>
-              {mode.theme_path ? <p className="text-xs text-zinc-500">Theme: {mode.theme_path}</p> : null}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => openEditModal(mode)}>
-                Edit
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => void remove(mode.id)}>Delete</Button>
-            </div>
-          </Card>
-        ))}
+      <div>
+        <h1 className="text-2xl font-semibold">Learning Plan · {categoryLabel[currentCategory]}</h1>
+        <p className="text-sm text-zinc-400">系统会先根据唯一学习目标做单词和句子测评，再生成训练计划，并按次日测试自动调难度。</p>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <Card className="w-full max-w-3xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{editingID ? 'Edit Mode' : 'Create Mode'}</h2>
-              <Button variant="ghost" size="sm" onClick={resetModal}>
-                Close
-              </Button>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <p className="w-32 shrink-0 text-sm text-zinc-300">Name:</p>
-                <div className="flex flex-1 items-center gap-2">
-                  <Input
-                    placeholder="Input name"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  />
-                  <span className="w-4 text-center text-lg leading-none text-red-500">*</span>
+      {loading && <Card><p className="text-sm text-zinc-400">正在加载学习状态...</p></Card>}
+      {error && <Card><p className="text-sm text-red-400">{error}</p></Card>}
+
+      {!loading && bundle.goal_required && (
+        <Card className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold">设置唯一学习目标</h2>
+            <p className="text-sm text-zinc-400">每个用户只保留一个目标。设置后会立即进入初始单词/句子测评。</p>
+          </div>
+          <Input
+            value={goal}
+            placeholder="例如：三个月内提升职场英语表达"
+            onChange={(event) => setGoal(event.target.value)}
+          />
+          <Input
+            type="number"
+            min="1"
+            value={dailyMinutes}
+            placeholder="每天学习多少分钟"
+            onChange={(event) => setDailyMinutes(Number(event.target.value) || 0)}
+          />
+          <Input
+            value={studyTimeRange}
+            placeholder="例如：工作日 20:00-21:00"
+            onChange={(event) => setStudyTimeRange(event.target.value)}
+          />
+          <Button onClick={() => void submitGoal()} disabled={savingGoal}>
+            {savingGoal ? '保存中...' : '保存目标并开始测评'}
+          </Button>
+        </Card>
+      )}
+
+      {!loading && !bundle.goal_required && bundle.assessment_required && bundle.assessment && (
+        <Card className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">{assessmentTypeLabel[bundle.assessment.assessment_type] ?? '能力测试'}</h2>
+            <p className="text-sm text-zinc-400">
+              当前目标：{bundle.profile?.goal}。请完成下面的单词和句子测试，系统会据此生成或调整训练难度。
+            </p>
+          </div>
+          <div className="space-y-3">
+            {bundle.assessment_items.map((item, index) => (
+              <Card key={item.id} className="space-y-2 border-zinc-700">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm text-zinc-300">
+                    {index + 1}. {item.question}
+                  </p>
+                  <PronunciationButton pronunciation={item.question_pronunciation} label="Play prompt" />
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <p className="w-32 shrink-0 text-sm text-zinc-300">Description:</p>
-                <div className="flex flex-1 items-center gap-2">
-                  <Input
-                    placeholder="Input description"
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  />
-                  <span className="w-4" />
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <p className="w-32 shrink-0 text-sm text-zinc-300">Level:</p>
-                <div className="flex flex-1 items-center gap-2">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10}
-                    placeholder="1-10"
-                    value={form.level}
-                    onChange={(e) => setForm({ ...form, level: e.target.value })}
-                  />
-                  <span className="w-4 text-center text-lg leading-none text-red-500">*</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <p className="w-32 shrink-0 text-sm text-zinc-300">Nums:</p>
-                <div className="flex flex-1 items-center gap-2">
-                  <Input
-                    type="number"
-                    min={1}
-                    placeholder="Input nums"
-                    value={form.numbers}
-                    onChange={(e) => setForm({ ...form, numbers: e.target.value })}
-                  />
-                  <span className="w-4 text-center text-lg leading-none text-red-500">*</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <p className="w-32 shrink-0 text-sm text-zinc-300">Direction:</p>
-                <div className="flex flex-1 items-center gap-2">
-                  <select
-                    className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm"
-                    value={form.mode}
-                    onChange={(e) => setForm({ ...form, mode: Number(e.target.value) })}
-                  >
-                    <option value={1}>中译英</option>
-                    <option value={2}>英译中</option>
-                  </select>
-                  <span className="w-4" />
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <p className="w-32 shrink-0 text-sm text-zinc-300">Theme:</p>
-                <div className="flex flex-1 items-center gap-2">
-                  <select
-                    className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm"
-                    value={form.themeLevel1ID ?? 0}
-                    onChange={(e) => {
-                      const nextLevel1ID = Number(e.target.value) || undefined
-                      setForm((prev) => ({
-                        ...prev,
-                        themeLevel1ID: nextLevel1ID,
-                        themeLevel2ID: undefined,
-                        themeLevel3ID: undefined,
-                      }))
-                    }}
-                  >
-                    <option value={0}>Lv1 (Optional)</option>
-                    {level1Themes.map((item) => (
-                      <option key={item.id} value={item.id}>{item.name}</option>
-                    ))}
-                  </select>
-                  <select
-                    className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm"
-                    disabled={!form.themeLevel1ID}
-                    value={form.themeLevel2ID ?? 0}
-                    onChange={(e) => {
-                      const nextLevel2ID = Number(e.target.value) || undefined
-                      setForm((prev) => ({
-                        ...prev,
-                        themeLevel2ID: nextLevel2ID,
-                        themeLevel3ID: undefined,
-                      }))
-                    }}
-                  >
-                    <option value={0}>Lv2 (Optional)</option>
-                    {level2Themes.map((item) => (
-                      <option key={item.id} value={item.id}>{item.name}</option>
-                    ))}
-                  </select>
-                  <select
-                    className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm"
-                    disabled={!form.themeLevel2ID}
-                    value={form.themeLevel3ID ?? 0}
-                    onChange={(e) => {
-                      const nextLevel3ID = Number(e.target.value) || undefined
-                      setForm((prev) => ({ ...prev, themeLevel3ID: nextLevel3ID }))
-                    }}
-                  >
-                    <option value={0}>Lv3 (Optional)</option>
-                    {level3Themes.map((item) => (
-                      <option key={item.id} value={item.id}>{item.name}</option>
-                    ))}
-                  </select>
-                  <span className="w-4" />
-                </div>
-              </div>
-              {Array.from({ length: requirementCount }).map((_, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <p className="w-32 shrink-0 text-sm text-zinc-300">Requirement {index + 1}:</p>
-                  <div className="flex flex-1 items-center gap-2">
-                    <Input
-                      placeholder={`Input requirement ${index + 1}`}
-                      value={form.requirements[index] ?? ''}
-                      onChange={(e) => updateRequirement(index, e.target.value)}
-                    />
-                    {index === 0 ? (
-                      requirementCount < 3 ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-9 w-9 p-0"
-                          onClick={() => setRequirementCount((prev) => Math.min(3, prev + 1))}
-                        >
-                          +
-                        </Button>
-                      ) : (
-                        <span className="h-9 w-9" />
-                      )
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-9 w-9 p-0"
-                        onClick={() => removeRequirement(index)}
-                      >
-                        -
-                      </Button>
-                    )}
+                <Input
+                  value={answers[item.id] ?? ''}
+                  placeholder="请输入你的答案"
+                  onChange={(event) => setAnswers((prev) => ({ ...prev, [item.id]: event.target.value }))}
+                />
+              </Card>
+            ))}
+          </div>
+          <Button onClick={() => void submitAssessment()} disabled={submittingAssessment}>
+            {submittingAssessment ? '提交测试中...' : '提交测试'}
+          </Button>
+        </Card>
+      )}
+
+      {!loading && !bundle.goal_required && !bundle.assessment_required && bundle.plan_generation_required && bundle.profile && (
+        <Card className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">用户画像</h2>
+            <p className="text-sm text-zinc-400">水平测试已完成。请先确认系统生成的用户画像，再手动生成学习计划。</p>
+          </div>
+          <div className="space-y-2 text-sm text-zinc-300">
+            <p>学习目标：{bundle.profile.goal}</p>
+            <p>每日学习时长：{bundle.profile.daily_minutes} 分钟</p>
+            <p>学习时间段：{bundle.profile.study_time_range || '待设置'}</p>
+            <p>单词 Level：{bundle.profile.word_level}</p>
+            <p>句子 Level：{bundle.profile.sentence_level}</p>
+            <p>综合 Level：{bundle.profile.overall_level}</p>
+            <p>训练方向：{translationModeLabel[bundle.profile.translation_mode] ?? '中译英'}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => void submitGoal()} disabled={savingGoal}>
+              更新目标并重新测评
+            </Button>
+            <Button onClick={() => void generatePlan()} disabled={generatingPlan}>
+              {generatingPlan ? '生成中...' : '生成学习计划'}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {!loading && !bundle.goal_required && !bundle.assessment_required && !bundle.plan_generation_required && bundle.profile && (
+        <Card className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold">当前学习画像</h2>
+            <p className="text-sm text-zinc-400">{bundle.plan?.goal_summary ?? `目标：${bundle.profile.goal}`}</p>
+          </div>
+          <div className="flex flex-wrap gap-4 text-sm text-zinc-300">
+            <span>每天 {bundle.profile.daily_minutes} 分钟</span>
+            <span>{bundle.profile.study_time_range || '时间段待设置'}</span>
+            <span>单词 Level {bundle.profile.word_level}</span>
+            <span>句子 Level {bundle.profile.sentence_level}</span>
+            <span>综合 Level {bundle.profile.overall_level}</span>
+            <span>{translationModeLabel[bundle.profile.translation_mode] ?? '中译英'}</span>
+          </div>
+          <div className="flex gap-2">
+            <Input value={goal} onChange={(event) => setGoal(event.target.value)} />
+            <Input
+              type="number"
+              min="1"
+              value={dailyMinutes}
+              onChange={(event) => setDailyMinutes(Number(event.target.value) || 0)}
+            />
+            <Input value={studyTimeRange} onChange={(event) => setStudyTimeRange(event.target.value)} />
+            <Button variant="outline" onClick={() => void submitGoal()} disabled={savingGoal}>
+              更新目标并重新测评
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {!loading && !bundle.goal_required && !bundle.assessment_required && !bundle.plan_generation_required && (
+        <Card className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold">今日任务</h2>
+            <p className="text-sm text-zinc-400">如果今天练习里有 90% 题目满分，系统会在明天先安排提高难度测试；如果 90% 都不是满分，则安排降低难度测试。</p>
+          </div>
+          {categoryItems.length === 0 && (
+            <p className="text-sm text-zinc-400">当前分类下暂无任务，请切换左侧分类查看。</p>
+          )}
+          {categoryItems.map((item) => (
+            <Card key={item.id} className="border-zinc-700">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <p className="font-medium">{item.name}</p>
+                  <p className="text-sm text-zinc-400">{item.description}</p>
+                  <div className="flex flex-wrap gap-4 text-xs text-zinc-500">
+                    <span>{translationModeLabel[item.translation_mode] ?? '-'}</span>
+                    <span>Lv{item.level}</span>
+                    <span>{item.numbers} 题</span>
+                    <span>约 {item.estimated_minutes} 分钟</span>
                   </div>
+                  {item.requirements.length > 0 && (
+                    <div className="space-y-1 text-xs text-zinc-300">
+                      {item.requirements.map((requirement) => (
+                        <p key={requirement}>{requirement}</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-            {formError && <p className="text-sm text-red-400">{formError}</p>}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={resetModal}>
-                Cancel
-              </Button>
-              <Button onClick={() => void submit()}>{editingID ? 'Update' : 'Create'}</Button>
-            </div>
-          </Card>
-        </div>
+                <Button onClick={() => navigate(`/practice/${currentCategory}?modeId=${item.mode_id ?? 0}`)} disabled={!item.mode_id}>
+                  开始这个任务
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </Card>
       )}
     </div>
   )

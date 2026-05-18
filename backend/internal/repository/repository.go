@@ -308,14 +308,18 @@ func (r *Repository) CreateMode(requestID string, mode *model.Mode) error {
 func (r *Repository) ListModes(requestID string, userID uint, studyType *int, translationMode *int) ([]model.Mode, error) {
 	logger.L().Info("db list modes", zap.String("request_id", requestID), zap.Uint("user_id", userID))
 	var modes []model.Mode
-	query := r.db.Where("user_id = ?", userID)
+	activePlanModeIDs, err := r.ListActivePlanModeIDs(requestID, userID)
+	query := r.db.Where("user_id = ? AND source = ?", userID, "manual")
+	if len(activePlanModeIDs) > 0 {
+		query = query.Or("user_id = ? AND source = ? AND id IN ?", userID, "plan_auto", activePlanModeIDs)
+	}
 	if studyType != nil {
 		query = query.Where("type = ?", *studyType)
 	}
 	if translationMode != nil {
 		query = query.Where("mode = ?", *translationMode)
 	}
-	err := query.Order("id desc").Find(&modes).Error
+	err = query.Order("source asc, id desc").Find(&modes).Error
 	if err != nil {
 		logger.L().Error("db list modes failed", zap.String("request_id", requestID), zap.Error(err))
 	}
@@ -361,6 +365,253 @@ func (r *Repository) UpdateMode(requestID string, mode *model.Mode) error {
 		logger.L().Error("db update mode failed", zap.String("request_id", requestID), zap.Error(err))
 	}
 	return err
+}
+
+func (r *Repository) GetLearningProfileByUser(requestID string, userID uint) (*model.LearningProfile, error) {
+	logger.L().Info("db get learning profile", zap.String("request_id", requestID), zap.Uint("user_id", userID))
+	var profile model.LearningProfile
+	if err := r.db.Where("user_id = ?", userID).First(&profile).Error; err != nil {
+		logger.L().Error("db get learning profile failed", zap.String("request_id", requestID), zap.Error(err))
+		return nil, err
+	}
+	return &profile, nil
+}
+
+func (r *Repository) UpsertLearningProfile(requestID string, profile *model.LearningProfile) error {
+	logger.L().Info("db upsert learning profile", zap.String("request_id", requestID), zap.Uint("user_id", profile.UserID))
+	var existing model.LearningProfile
+	err := r.db.Where("user_id = ?", profile.UserID).First(&existing).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return r.db.Create(profile).Error
+		}
+		logger.L().Error("db upsert learning profile failed", zap.String("request_id", requestID), zap.Error(err))
+		return err
+	}
+	profile.ID = existing.ID
+	return r.db.Model(&model.LearningProfile{}).
+		Where("id = ?", existing.ID).
+		Updates(map[string]any{
+			"goal":                     profile.Goal,
+			"daily_minutes":            profile.DailyMinutes,
+			"study_time_range":         profile.StudyTimeRange,
+			"translation_mode":         profile.TranslationMode,
+			"focuses":                  profile.Focuses,
+			"notes":                    profile.Notes,
+			"word_level":               profile.WordLevel,
+			"sentence_level":           profile.SentenceLevel,
+			"overall_level":            profile.OverallLevel,
+			"onboarding_completed":     profile.OnboardingCompleted,
+			"last_assessment_at":       profile.LastAssessmentAt,
+			"next_assessment_type":     profile.NextAssessmentType,
+			"next_assessment_due_date": profile.NextAssessmentDueDate,
+		}).Error
+}
+
+func (r *Repository) ArchiveActiveLearningPlans(requestID string, userID uint) error {
+	logger.L().Info("db archive active learning plans", zap.String("request_id", requestID), zap.Uint("user_id", userID))
+	return r.db.Model(&model.LearningPlan{}).
+		Where("user_id = ? AND status = ?", userID, "active").
+		Update("status", "archived").Error
+}
+
+func (r *Repository) CreateLearningPlan(requestID string, plan *model.LearningPlan, items []model.LearningPlanItem, modes []model.Mode) error {
+	logger.L().Info("db create learning plan", zap.String("request_id", requestID), zap.Uint("user_id", plan.UserID))
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(plan).Error; err != nil {
+			return err
+		}
+		for index := range items {
+			items[index].PlanID = plan.ID
+			items[index].UserID = plan.UserID
+			if err := tx.Create(&items[index]).Error; err != nil {
+				return err
+			}
+			if index >= len(modes) {
+				continue
+			}
+			modes[index].UserID = plan.UserID
+			modes[index].Source = "plan_auto"
+			modes[index].PlanItemID = &items[index].ID
+			if err := tx.Create(&modes[index]).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&model.LearningPlanItem{}).
+				Where("id = ?", items[index].ID).
+				Update("mode_id", modes[index].ID).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (r *Repository) GetActiveLearningPlan(requestID string, userID uint) (*model.LearningPlan, []model.LearningPlanItem, error) {
+	logger.L().Info("db get active learning plan", zap.String("request_id", requestID), zap.Uint("user_id", userID))
+	var plan model.LearningPlan
+	if err := r.db.Where("user_id = ? AND status = ?", userID, "active").Order("id desc").First(&plan).Error; err != nil {
+		logger.L().Error("db get active learning plan failed", zap.String("request_id", requestID), zap.Error(err))
+		return nil, nil, err
+	}
+	var items []model.LearningPlanItem
+	if err := r.db.Where("plan_id = ?", plan.ID).Order("sort_order asc, id asc").Find(&items).Error; err != nil {
+		logger.L().Error("db get learning plan items failed", zap.String("request_id", requestID), zap.Error(err))
+		return nil, nil, err
+	}
+	r.attachThemePathForPlanItems(requestID, items)
+	return &plan, items, nil
+}
+
+func (r *Repository) ListActivePlanModeIDs(requestID string, userID uint) ([]uint, error) {
+	var ids []uint
+	err := r.db.Model(&model.LearningPlanItem{}).
+		Select("learning_plan_items.mode_id").
+		Joins("JOIN learning_plans ON learning_plans.id = learning_plan_items.plan_id").
+		Where("learning_plans.user_id = ? AND learning_plans.status = ? AND learning_plan_items.mode_id IS NOT NULL", userID, "active").
+		Order("learning_plan_items.sort_order asc, learning_plan_items.id asc").
+		Pluck("learning_plan_items.mode_id", &ids).Error
+	if err != nil {
+		logger.L().Error("db list active plan mode ids failed", zap.String("request_id", requestID), zap.Error(err))
+		return nil, err
+	}
+	return ids, nil
+}
+
+func (r *Repository) GetLatestLearningPlanVersion(requestID string, userID uint) (int, error) {
+	var version int
+	err := r.db.Model(&model.LearningPlan{}).
+		Where("user_id = ?", userID).
+		Select("COALESCE(MAX(version), 0)").
+		Scan(&version).Error
+	if err != nil {
+		logger.L().Error("db get latest learning plan version failed", zap.String("request_id", requestID), zap.Error(err))
+		return 0, err
+	}
+	return version, nil
+}
+
+func (r *Repository) ArchiveActiveLearningAssessments(requestID string, userID uint) error {
+	return r.db.Model(&model.LearningAssessment{}).
+		Where("user_id = ? AND status IN ?", userID, []string{"pending", "started"}).
+		Update("status", "archived").Error
+}
+
+func (r *Repository) CreateLearningAssessment(requestID string, assessment *model.LearningAssessment, items []model.LearningAssessmentItem) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(assessment).Error; err != nil {
+			return err
+		}
+		for index := range items {
+			items[index].AssessmentID = assessment.ID
+		}
+		if len(items) > 0 {
+			if err := tx.Create(&items).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (r *Repository) GetLatestActiveLearningAssessment(requestID string, userID uint) (*model.LearningAssessment, []model.LearningAssessmentItem, error) {
+	var assessment model.LearningAssessment
+	if err := r.db.Where("user_id = ? AND status IN ?", userID, []string{"pending", "started"}).Order("id desc").First(&assessment).Error; err != nil {
+		logger.L().Error("db get active learning assessment failed", zap.String("request_id", requestID), zap.Error(err))
+		return nil, nil, err
+	}
+	var items []model.LearningAssessmentItem
+	if err := r.db.Where("assessment_id = ?", assessment.ID).Order("id asc").Find(&items).Error; err != nil {
+		logger.L().Error("db get learning assessment items failed", zap.String("request_id", requestID), zap.Error(err))
+		return nil, nil, err
+	}
+	return &assessment, items, nil
+}
+
+func (r *Repository) CompleteLearningAssessment(
+	requestID string,
+	assessment *model.LearningAssessment,
+	items []model.LearningAssessmentItem,
+	profile *model.LearningProfile,
+) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			if err := tx.Model(&model.LearningAssessmentItem{}).
+				Where("id = ? AND assessment_id = ?", item.ID, assessment.ID).
+				Updates(map[string]any{
+					"user_answer": item.UserAnswer,
+					"score":       item.Score,
+				}).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Model(&model.LearningAssessment{}).
+			Where("id = ?", assessment.ID).
+			Updates(map[string]any{
+				"status":               assessment.Status,
+				"word_level_after":     assessment.WordLevelAfter,
+				"sentence_level_after": assessment.SentenceLevelAfter,
+				"overall_level_after":  assessment.OverallLevelAfter,
+				"completed_at":         assessment.CompletedAt,
+				"started_at":           assessment.StartedAt,
+			}).Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.LearningProfile{}).
+			Where("id = ?", profile.ID).
+			Updates(map[string]any{
+				"goal":                     profile.Goal,
+				"daily_minutes":            profile.DailyMinutes,
+				"study_time_range":         profile.StudyTimeRange,
+				"translation_mode":         profile.TranslationMode,
+				"focuses":                  profile.Focuses,
+				"notes":                    profile.Notes,
+				"word_level":               profile.WordLevel,
+				"sentence_level":           profile.SentenceLevel,
+				"overall_level":            profile.OverallLevel,
+				"onboarding_completed":     profile.OnboardingCompleted,
+				"last_assessment_at":       profile.LastAssessmentAt,
+				"next_assessment_type":     profile.NextAssessmentType,
+				"next_assessment_due_date": profile.NextAssessmentDueDate,
+			}).Error
+	})
+}
+
+func (r *Repository) ScheduleNextAssessment(requestID string, profileID uint, assessmentType string, dueDate time.Time) error {
+	return r.db.Model(&model.LearningProfile{}).
+		Where("id = ?", profileID).
+		Updates(map[string]any{
+			"next_assessment_type":     assessmentType,
+			"next_assessment_due_date": dueDate,
+		}).Error
+}
+
+func (r *Repository) ClearNextAssessment(requestID string, profileID uint) error {
+	return r.db.Model(&model.LearningProfile{}).
+		Where("id = ?", profileID).
+		Updates(map[string]any{
+			"next_assessment_type":     "",
+			"next_assessment_due_date": nil,
+		}).Error
+}
+
+func (r *Repository) DeletePlanAutoModes(requestID string, userID uint) error {
+	return r.db.Where("user_id = ? AND source = ?", userID, "plan_auto").Delete(&model.Mode{}).Error
+}
+
+func (r *Repository) GetTodayQuestionPerformance(requestID string, userID uint, dayStart, dayEnd time.Time) (int, int, error) {
+	var items []model.UserQuestion
+	err := r.db.Where("user_id = ? AND create_time >= ? AND create_time < ?", userID, dayStart, dayEnd).Find(&items).Error
+	if err != nil {
+		logger.L().Error("db get today question performance failed", zap.String("request_id", requestID), zap.Error(err))
+		return 0, 0, err
+	}
+	fullScore := 0
+	for _, item := range items {
+		if item.Score >= 100 {
+			fullScore++
+		}
+	}
+	return len(items), fullScore, nil
 }
 func (r *Repository) DeleteMode(requestID string, id, userID uint) error {
 	logger.L().Info("db delete mode", zap.String("request_id", requestID), zap.Uint("mode_id", id), zap.Uint("user_id", userID))
@@ -877,16 +1128,44 @@ func (r *Repository) attachThemePathForModes(requestID string, modes []model.Mod
 	if len(modes) == 0 {
 		return
 	}
+	buildPath, ok := r.themePathBuilder(requestID)
+	if !ok {
+		return
+	}
+	for index := range modes {
+		if modes[index].ThemeID == nil {
+			continue
+		}
+		modes[index].ThemePath = buildPath(*modes[index].ThemeID)
+	}
+}
+
+func (r *Repository) attachThemePathForPlanItems(requestID string, items []model.LearningPlanItem) {
+	if len(items) == 0 {
+		return
+	}
+	buildPath, ok := r.themePathBuilder(requestID)
+	if !ok {
+		return
+	}
+	for index := range items {
+		if items[index].ThemeID == nil {
+			continue
+		}
+		items[index].ThemePath = buildPath(*items[index].ThemeID)
+	}
+}
+
+func (r *Repository) themePathBuilder(requestID string) (func(uint) string, bool) {
 	allThemes, err := r.ListAllThemes(requestID)
 	if err != nil || len(allThemes) == 0 {
-		return
+		return nil, false
 	}
 	themeByID := make(map[uint]model.Theme, len(allThemes))
 	for _, item := range allThemes {
 		themeByID[item.ID] = item
 	}
-
-	buildPath := func(themeID uint) string {
+	return func(themeID uint) string {
 		path := make([]string, 0, 3)
 		currentID := themeID
 		for i := 0; i < 3; i++ {
@@ -901,16 +1180,5 @@ func (r *Repository) attachThemePathForModes(requestID string, modes []model.Mod
 			currentID = *current.ParentID
 		}
 		return strings.Join(path, " / ")
-	}
-
-	for index := range modes {
-		if modes[index].ThemeID == nil {
-			continue
-		}
-		themeID := *modes[index].ThemeID
-		if _, ok := themeByID[themeID]; !ok {
-			continue
-		}
-		modes[index].ThemePath = buildPath(themeID)
-	}
+	}, true
 }

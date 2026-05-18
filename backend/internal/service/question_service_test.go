@@ -114,6 +114,7 @@ func setupQuestionServiceForTest(t *testing.T, responses []string, level, number
 		"qwen2.5",
 		promptFile.Name(),
 		analyzeFile.Name(),
+		analyzeFile.Name(),
 		repairFile.Name(),
 		promptFile.Name(),
 		true,

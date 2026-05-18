@@ -1,7 +1,7 @@
 <view class="page">
   <view class="hero-card mode-hero">
-    <text class="section-title">{{userName}}，今天准备练什么？</text>
-    <text class="section-subtitle">先选学习类型，再选择适合的模式，练习页会直接复用这里的选择。</text>
+    <text class="section-title">{{userName}}，今天由系统来安排学习</text>
+    <text class="section-subtitle">先设置唯一学习目标，再完成单词和句子测评，之后系统会自动生成训练计划，并在需要时安排次日难度测试。</text>
     <view class="type-group">
       <button class="{{selectedType === 1 ? 'type-chip active' : 'type-chip'}}" data-value="1" bindtap="onTypeChange">单词</button>
       <button class="{{selectedType === 2 ? 'type-chip active' : 'type-chip'}}" data-value="2" bindtap="onTypeChange">句子</button>
@@ -18,24 +18,74 @@
   </view>
 
   <view wx:if="{{loading}}" class="section-card feedback-card">
-    <text class="muted">正在加载模式...</text>
+    <text class="muted">正在加载学习状态...</text>
+  </view>
+
+  <view wx:if="{{!loading && bundle.goal_required}}" class="section-card planner-card">
+    <text class="field-label">你的唯一学习目标</text>
+    <input class="field-input" placeholder="例如：三个月内提升职场英语表达" value="{{goal}}" bindinput="onGoalInput" />
+    <button class="primary-button submit-button" loading="{{savingGoal}}" bindtap="saveGoal">
+      {{savingGoal ? '保存中...' : '保存目标并开始测评'}}
+    </button>
+  </view>
+
+  <view wx:if="{{!loading && !bundle.goal_required && bundle.assessment_required && bundle.assessment}}" class="section-card planner-card">
+    <text class="section-title">{{bundle.assessment.assessment_type === 'upgrade' ? '提高难度测试' : bundle.assessment.assessment_type === 'downgrade' ? '降低难度测试' : '初始水平测试'}}</text>
+    <text class="section-subtitle">当前目标：{{bundle.profile.goal}}</text>
+
+    <view wx:for="{{bundle.assessment_items}}" wx:key="id" class="assessment-card">
+      <text class="assessment-question">{{index + 1}}. {{item.question}}</text>
+      <button
+        wx:if="{{item.question_pronunciation && item.question_pronunciation.audio_url}}"
+        class="secondary-button pronunciation-button"
+        data-url="{{item.question_pronunciation.audio_url}}"
+        bindtap="playPronunciation"
+      >
+        播放英文题干
+      </button>
+      <textarea
+        class="field-textarea"
+        placeholder="请输入你的答案"
+        value="{{assessmentAnswers[index]}}"
+        data-index="{{index}}"
+        bindinput="onAssessmentAnswerInput"
+      />
+    </view>
+
+    <button class="primary-button submit-button" loading="{{submittingAssessment}}" bindtap="submitAssessment">
+      {{submittingAssessment ? '提交测试中...' : '提交测试并生成计划'}}
+    </button>
+  </view>
+
+  <view wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && bundle.profile}}" class="section-card planner-card">
+    <text class="section-title">当前学习画像</text>
+    <text class="section-subtitle">{{bundle.plan.goal_summary}}</text>
+    <view class="profile-metrics">
+      <text class="meta-text">单词 Lv{{bundle.profile.word_level}}</text>
+      <text class="meta-text">句子 Lv{{bundle.profile.sentence_level}}</text>
+      <text class="meta-text">综合 Lv{{bundle.profile.overall_level}}</text>
+    </view>
+    <text class="field-label">更新学习目标</text>
+    <input class="field-input" placeholder="修改后会重新测评" value="{{goal}}" bindinput="onGoalInput" />
+    <button class="secondary-button submit-button" loading="{{savingGoal}}" bindtap="saveGoal">更新目标并重新测评</button>
   </view>
 
   <empty-state
-    wx:if="{{!loading && !error && modes.length === 0}}"
-    title="还没有可用模式"
-    description="先去网页后台创建模式，或确认当前账号是否有对应数据。"
+    wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && visibleItems.length === 0}}"
+    title="当前分类下暂无任务"
+    description="切换上面的分类，查看系统为你安排的今日训练。"
   />
 
-  <view wx:for="{{modes}}" wx:key="id" class="{{selectedModeID === item.id ? 'section-card mode-card active' : 'section-card mode-card'}}" data-id="{{item.id}}" bindtap="onChooseMode">
+  <view wx:for="{{visibleItems}}" wx:key="id" class="{{selectedModeID === item.mode_id ? 'section-card mode-card active' : 'section-card mode-card'}}" data-id="{{item.id}}" bindtap="onChooseTask">
     <view class="mode-card-head">
       <text class="mode-title">{{item.name}}</text>
       <text class="pill">Lv{{item.level}}</text>
     </view>
-    <text class="mode-description">{{item.description || '暂无描述'}}</text>
+    <text class="mode-description">{{item.description}}</text>
     <view class="mode-meta">
       <text class="meta-text">题量 {{item.numbers}}</text>
-      <text class="meta-text">方向 {{item.mode === 1 ? '中译英' : '英译中'}}</text>
+      <text class="meta-text">方向 {{item.translation_mode === 1 ? '中译英' : '英译中'}}</text>
+      <text class="meta-text">约 {{item.estimated_minutes}} 分钟</text>
     </view>
     <view wx:if="{{item.requirements.length > 0}}" class="requirement-list">
       <text wx:for="{{item.requirements}}" wx:key="*this" class="requirement-item">{{item}}</text>

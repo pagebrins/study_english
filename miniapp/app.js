@@ -2,7 +2,7 @@ const { getStorageToken, isLoggedIn } = require('./utils/session')
 
 App({
   globalData: {
-    apiBaseUrl: 'https://example.com/api/v1',
+    apiBaseUrl: 'https://kiwix.top:8091/api/v1',
     token: getStorageToken(),
     user: null,
     selectedMode: null,

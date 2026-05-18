@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "模式选择",
+  "navigationBarTitleText": "学习设置",
   "usingComponents": {
     "empty-state": "/components/empty-state/index"
   }

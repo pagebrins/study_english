@@ -38,6 +38,18 @@ AI-powered English learning platform for students with basic English skills.
 - 发布脚本：
   - `bash scripts/deploy-miniapp.sh --version 0.1.0 --desc "miniapp init"`
 
+## Web 微信扫码登录
+- Web 登录页已支持“微信扫一扫登录”
+- 需要在后端环境变量中配置：
+  - `WECHAT_WEB_APP_ID`
+  - `WECHAT_WEB_APP_SECRET`
+  - `WECHAT_WEB_CALLBACK_URL`
+  - `WECHAT_WEB_FRONTEND_LOGIN_URL`
+- 本地联调示例：
+  - `WECHAT_WEB_CALLBACK_URL=http://localhost:9090/api/v1/auth/wechat-web/callback`
+  - `WECHAT_WEB_FRONTEND_LOGIN_URL=http://localhost:5173/auth`
+- 微信开放平台后台需要把回调地址域名加入网站应用授权回调域
+
 ## API response contract
 All backend APIs return:
 ```json

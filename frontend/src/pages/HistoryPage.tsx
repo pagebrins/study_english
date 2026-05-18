@@ -5,11 +5,10 @@ import 'react-day-picker/style.css'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Input } from '../components/ui/input'
-import { categoryLabel } from '../constants/study'
+import { PronunciationButton } from '../components/PronunciationButton'
 import { useModes } from '../hooks/useModes'
 import { useQuestions } from '../hooks/useQuestions'
 import { useScore } from '../hooks/useScore'
-import { useStudyCategory } from '../hooks/useStudyCategory'
 import { useHelpChatStore } from '../store/helpChatStore'
 import type { QuestionListFilters } from '../types/question'
 
@@ -17,7 +16,6 @@ import type { QuestionListFilters } from '../types/question'
  * Learned question history page.
  */
 export const HistoryPage = () => {
-  const { currentCategory, currentType } = useStudyCategory()
   const { items, fetch, remove, update } = useQuestions()
   const { items: modes, fetch: fetchModes } = useModes()
   const { recalculate, today } = useScore()
@@ -34,9 +32,9 @@ export const HistoryPage = () => {
   const datePickerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    void fetch({ type: currentType })
-    void fetchModes({ type: currentType })
-  }, [currentType, fetch, fetchModes])
+    void fetch()
+    void fetchModes()
+  }, [fetch, fetchModes])
 
   useEffect(() => {
     const onClickOutside = (event: MouseEvent) => {
@@ -56,7 +54,6 @@ export const HistoryPage = () => {
     const selectedMode = selectedModeIDs.length === 1 ? modes.find((item) => item.id === selectedModeIDs[0]) : undefined
     setContext({
       page: 'history',
-      study_type: currentType,
       translation_mode: selectedMode?.mode,
       question_snapshots: items.map((item, index) => ({
         question_id: item.id,
@@ -66,7 +63,7 @@ export const HistoryPage = () => {
         user_answer: item.answer_text,
       })),
     })
-  }, [currentType, items, modes, selectedModeIDs, setContext])
+  }, [items, modes, selectedModeIDs, setContext])
 
   const selectedRange = useMemo<DateRange | undefined>(() => {
     if (!startDate && !endDate) return undefined
@@ -124,7 +121,6 @@ export const HistoryPage = () => {
       start_date: startDate || undefined,
       end_date: endDate || undefined,
       mode_ids: selectedModeIDs.length ? selectedModeIDs : undefined,
-      type: currentType,
       min_score: parsedMinScore,
       max_score: parsedMaxScore,
     }
@@ -143,14 +139,14 @@ export const HistoryPage = () => {
     setMinScore('')
     setMaxScore('')
     setFilterError('')
-    await fetch({ type: currentType })
+    await fetch()
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">History · {categoryLabel[currentCategory]}</h1>
-        <Button variant="outline" onClick={() => void recalculate({ type: currentType })}>
+        <h1 className="text-2xl font-semibold">History</h1>
+        <Button variant="outline" onClick={() => void recalculate()}>
           Recalculate Score ({today?.score ?? 0})
         </Button>
       </div>
@@ -260,9 +256,15 @@ export const HistoryPage = () => {
       <div className="space-y-2">
         {items.map((item) => (
           <Card key={item.id} className="space-y-2">
-            <div>
-              <p>{item.question}</p>
-              <p className="text-xs text-zinc-500">Answer key: {item.answer_key} · Score: {item.score}</p>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <p>{item.question}</p>
+                <PronunciationButton pronunciation={item.question_pronunciation} label="Play prompt" />
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                <span>Answer key: {item.answer_key} · Score: {item.score}</span>
+                <PronunciationButton pronunciation={item.answer_key_pronunciation} label="Play answer" />
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Input

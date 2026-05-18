@@ -37,9 +37,29 @@
 }
 
 .feedback-card,
-.mode-card {
+.mode-card,
+.planner-card {
   margin-top: 24rpx;
   padding: 28rpx;
+}
+
+.planner-card .field-label:not(:first-child) {
+  margin-top: 24rpx;
+}
+
+.assessment-card {
+  margin-top: 24rpx;
+  padding: 24rpx;
+  border-radius: 20rpx;
+  background: #f8fafc;
+}
+
+.assessment-question {
+  display: block;
+  margin-bottom: 16rpx;
+  color: #0f172a;
+  font-size: 28rpx;
+  line-height: 1.7;
 }
 
 .mode-card.active {
@@ -83,4 +103,31 @@
   flex-wrap: wrap;
   gap: 12rpx;
   margin-top: 20rpx;
+}
+
+.focus-option {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 12rpx;
+  color: #334155;
+  font-size: 26rpx;
+}
+
+.focus-summary {
+  display: block;
+  margin-top: 12rpx;
+  color: #64748b;
+  font-size: 24rpx;
+}
+
+.profile-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin: 20rpx 0 12rpx;
+}
+
+.pronunciation-button {
+  margin-bottom: 16rpx;
 }

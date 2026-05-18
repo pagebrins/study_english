@@ -131,7 +131,7 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles(role_id);
 
 INSERT OR IGNORE INTO roles (code, name, description) VALUES ('admin', 'Admin', 'Full access');
 INSERT OR IGNORE INTO roles (code, name, description) VALUES ('learner', 'Learner', 'All except settings');
-INSERT OR IGNORE INTO roles (code, name, description) VALUES ('guest', 'Guest', 'No settings/chat/practice');
+INSERT OR IGNORE INTO roles (code, name, description) VALUES ('guest', 'Guest', 'No settings/chat');
 
 INSERT OR IGNORE INTO permissions (code, name, description) VALUES ('dashboard.view', 'Dashboard View', 'Access dashboard pages');
 INSERT OR IGNORE INTO permissions (code, name, description) VALUES ('modes.manage', 'Modes Manage', 'Access and manage modes');
@@ -151,7 +151,7 @@ SELECT r.id, p.id FROM roles r JOIN permissions p ON p.code IN ('dashboard.view'
 WHERE r.code = 'learner';
 
 INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r JOIN permissions p ON p.code IN ('dashboard.view', 'modes.manage', 'study.view', 'history.view')
+SELECT r.id, p.id FROM roles r JOIN permissions p ON p.code IN ('dashboard.view', 'modes.manage', 'study.view', 'history.view', 'practice.use')
 WHERE r.code = 'guest';
 
 INSERT OR IGNORE INTO user_roles (user_id, role_id)

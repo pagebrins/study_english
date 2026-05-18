@@ -44,6 +44,11 @@ func New(driver, dbPath, mysqlDSN string) (*gorm.DB, error) {
 		&model.Word{},
 		&model.WordTag{},
 		&model.Mode{},
+		&model.LearningProfile{},
+		&model.LearningPlan{},
+		&model.LearningPlanItem{},
+		&model.LearningAssessment{},
+		&model.LearningAssessmentItem{},
 		&model.UserQuestion{},
 		&model.PreGeneratedQuestion{},
 	); err != nil {

@@ -51,7 +51,7 @@ SELECT 'learner', 'Learner', 'All except settings'
 WHERE NOT EXISTS (SELECT 1 FROM roles WHERE code = 'learner');
 
 INSERT INTO roles (code, name, description)
-SELECT 'guest', 'Guest', 'No settings/chat/practice'
+SELECT 'guest', 'Guest', 'No settings/chat'
 WHERE NOT EXISTS (SELECT 1 FROM roles WHERE code = 'guest');
 
 INSERT INTO permissions (code, name, description)
@@ -105,7 +105,7 @@ WHERE r.code = 'learner'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
-JOIN permissions p ON p.code IN ('dashboard.view', 'modes.manage', 'study.view', 'history.view')
+JOIN permissions p ON p.code IN ('dashboard.view', 'modes.manage', 'study.view', 'history.view', 'practice.use')
 WHERE r.code = 'guest'
   AND NOT EXISTS (
     SELECT 1 FROM role_permissions rp

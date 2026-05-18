@@ -1,3 +1,5 @@
+import type { Pronunciation } from './pronunciation'
+
 export type WordTag = {
   id: number
   word_id: number
@@ -15,6 +17,8 @@ export type Word = {
   l2_category: string
   example: string
   tags: WordTag[]
+  word_pronunciation?: Pronunciation
+  example_pronunciation?: Pronunciation
   created_at: string
   updated_at: string
 }

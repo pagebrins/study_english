@@ -23,7 +23,7 @@ var DefaultRoleSeeds = []struct {
 }{
 	{Code: RoleAdmin, Name: "Admin", Description: "Full access"},
 	{Code: RoleLearner, Name: "Learner", Description: "All except settings"},
-	{Code: RoleGuest, Name: "Guest", Description: "No settings/chat/practice"},
+	{Code: RoleGuest, Name: "Guest", Description: "No settings/chat"},
 }
 
 var DefaultPermissionSeeds = []struct {
@@ -67,5 +67,6 @@ var DefaultRolePermissionCodes = map[string][]string{
 		PermModesManage,
 		PermStudyView,
 		PermHistoryView,
+		PermPracticeUse,
 	},
 }

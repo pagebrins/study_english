@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Input } from '../components/ui/input'
-import { categoryLabel, translationModeLabel } from '../constants/study'
+import { PronunciationButton } from '../components/PronunciationButton'
+import { categoryLabel, defaultStudyCategory, translationModeLabel } from '../constants/study'
 import { useModes } from '../hooks/useModes'
 import { useQuestions } from '../hooks/useQuestions'
-import { useStudyCategory } from '../hooks/useStudyCategory'
 import { questionApi } from '../services/question'
 import { useHelpChatStore } from '../store/helpChatStore'
 
@@ -13,21 +14,29 @@ import { useHelpChatStore } from '../store/helpChatStore'
  * AI question generation and answer submit page.
  */
 export const PracticePage = () => {
-  const { currentCategory, currentType } = useStudyCategory()
+  const [searchParams] = useSearchParams()
   const { items: modes, fetch: fetchModes } = useModes()
   const { generated, generatedModeId, error, generate, create, generating } = useQuestions()
   const { setContext } = useHelpChatStore()
-  const [modeId, setModeId] = useState(0)
+  const [modeId, setModeId] = useState(() => Number(searchParams.get('modeId') ?? 0))
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [issues, setIssues] = useState<Record<number, string[]>>({})
   const [submitting, setSubmitting] = useState<Record<number, boolean>>({})
   const selectedModeIdCandidate = modeId || generatedModeId
   const selectedModeId = modes.some((item) => item.id === selectedModeIdCandidate) ? selectedModeIdCandidate : 0
   const selectedMode = modes.find((item) => item.id === selectedModeId)
+  const currentCategory = selectedMode ? (selectedMode.type === 1 ? 'word' : selectedMode.type === 2 ? 'sentence' : 'article') : defaultStudyCategory
 
   useEffect(() => {
-    void fetchModes({ type: currentType })
-  }, [currentType, fetchModes])
+    void fetchModes()
+  }, [fetchModes])
+
+  useEffect(() => {
+    const modeIdFromQuery = Number(searchParams.get('modeId') ?? 0)
+    if (modeIdFromQuery > 0) {
+      setModeId(modeIdFromQuery)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     const answerIndexes = Object.keys(answers)
@@ -37,7 +46,7 @@ export const PracticePage = () => {
     setContext({
       page: 'practice',
       mode_id: selectedMode?.id,
-      study_type: currentType,
+      study_type: selectedMode?.type,
       translation_mode: selectedMode?.mode,
       current_question_index: currentQuestionIndex,
       question_snapshots: generated.map((item, index) => ({
@@ -47,7 +56,7 @@ export const PracticePage = () => {
         user_answer: answers[index] ?? '',
       })),
     })
-  }, [answers, currentType, generated, selectedMode?.id, selectedMode?.mode, setContext])
+  }, [answers, generated, selectedMode?.id, selectedMode?.mode, selectedMode?.type, setContext])
 
   const submit = async (index: number) => {
     const current = generated[index]
@@ -127,7 +136,10 @@ export const PracticePage = () => {
           <div className="space-y-3">
             {generated.map((item, index) => (
               <Card key={`${item.question}-${index}`} className="space-y-2 border-zinc-700">
-                <p className="text-sm text-zinc-300">{index + 1}. {item.question}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm text-zinc-300">{index + 1}. {item.question}</p>
+                  <PronunciationButton pronunciation={item.question_pronunciation} label="Play prompt" />
+                </div>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <Input
@@ -161,7 +173,10 @@ export const PracticePage = () => {
                         <li key={item}>{item}</li>
                       ))}
                     </ul>
-                    <p className="text-xs text-emerald-300">Standard answer: {item.answer_key}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-emerald-300">
+                      <p>Standard answer: {item.answer_key}</p>
+                      <PronunciationButton pronunciation={item.answer_key_pronunciation} label="Play answer" />
+                    </div>
                   </div>
                 ) : (
                   issues[index] && <p className="text-xs text-emerald-300">👍 you are very good</p>

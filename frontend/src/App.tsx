@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { defaultStudyCategory } from './constants/study'
+import { AdminRoute } from './components/AdminRoute'
 import { PermissionRoute } from './components/PermissionRoute'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { useAuth } from './hooks/useAuth'
@@ -8,7 +8,7 @@ import { AppLayout } from './layouts/AppLayout'
 import { AuthPage } from './pages/AuthPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { HistoryPage } from './pages/HistoryPage'
-import { ModesPage } from './pages/ModesPage'
+import { ModeSettingsPage } from './pages/ModeSettingsPage'
 import { PracticePage } from './pages/PracticePage'
 import { StudyPage } from './pages/StudyPage'
 import { ThemeSettingsPage } from './pages/ThemeSettingsPage'
@@ -39,19 +39,20 @@ const App = () => {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Navigate to={`/dashboard/${defaultStudyCategory}`} replace />} />
-        <Route path="/dashboard" element={<Navigate to={`/dashboard/${defaultStudyCategory}`} replace />} />
-        <Route path="/dashboard/:category" element={<DashboardPage />} />
-
-        <Route path="/modes" element={<Navigate to={`/modes/${defaultStudyCategory}`} replace />} />
-        <Route path="/modes/:category" element={<ModesPage />} />
-
-        <Route path="/study" element={<Navigate to={`/study/${defaultStudyCategory}`} replace />} />
-        <Route path="/study/:category" element={<StudyPage />} />
-
-        <Route path="/practice" element={<Navigate to={`/practice/${defaultStudyCategory}`} replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/study" element={<StudyPage />} />
         <Route
-          path="/practice/:category"
+          path="/mode-settings"
+          element={
+            <AdminRoute>
+              <ModeSettingsPage />
+            </AdminRoute>
+          }
+        />
+
+        <Route
+          path="/practice"
           element={
             <PermissionRoute permission="practice.use">
               <PracticePage />
@@ -59,10 +60,9 @@ const App = () => {
           }
         />
 
-        <Route path="/history" element={<Navigate to={`/history/${defaultStudyCategory}`} replace />} />
-        <Route path="/history/:category" element={<HistoryPage />} />
+        <Route path="/history" element={<HistoryPage />} />
       </Route>
-      <Route path="*" element={<Navigate to={token ? '/' : '/auth'} replace />} />
+      <Route path="*" element={<Navigate to={token ? '/dashboard' : '/auth'} replace />} />
     </Routes>
   )
 }

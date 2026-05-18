@@ -35,6 +35,9 @@ func (s *ModeService) List(requestID string, userID uint, studyType *int, transl
 }
 
 func (s *ModeService) Create(requestID string, mode *model.Mode) error {
+	if strings.TrimSpace(mode.Source) == "" {
+		mode.Source = modeSourceManual
+	}
 	if mode.Level < 1 || mode.Level > 10 {
 		logger.L().Error("mode create validation failed", zap.String("request_id", requestID))
 		return errors.New("level must be between 1 and 10")
@@ -61,6 +64,9 @@ func (s *ModeService) Create(requestID string, mode *model.Mode) error {
 }
 
 func (s *ModeService) Update(requestID string, mode *model.Mode) error {
+	if strings.TrimSpace(mode.Source) == "" {
+		mode.Source = modeSourceManual
+	}
 	if mode.Level < 1 || mode.Level > 10 {
 		logger.L().Error("mode update validation failed", zap.String("request_id", requestID))
 		return errors.New("level must be between 1 and 10")

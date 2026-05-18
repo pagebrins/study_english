@@ -1,10 +1,16 @@
+import { learningPlanService } from '../../services/learningPlan'
 import { modeService } from '../../services/mode'
 import { questionService } from '../../services/question'
 import { scoreService } from '../../services/score'
 import { requireLogin } from '../../utils/guard'
+import { miniappConfig } from '../../utils/config'
 import { setExplainContext } from '../../utils/session'
 import type { StudyMode } from '../../types/mode'
 import type { UserQuestion } from '../../types/question'
+
+let historyPronunciationPlayer: WechatMiniprogram.InnerAudioContext | null = null
+const resolveAudioURL = (url: string) =>
+  /^https?:\/\//i.test(url) ? url : `${miniappConfig.apiBaseUrl}${url.startsWith('/') ? url : `/${url}`}`
 
 type HistoryData = {
   loading: boolean
@@ -36,7 +42,26 @@ Page<HistoryData>({
   },
   onShow() {
     if (!requireLogin()) return
-    void this.bootstrap()
+    void this.ensureLearningReady()
+  },
+  async ensureLearningReady() {
+    try {
+      const learningStatus = await learningPlanService.current()
+      if (learningStatus.goal_required || learningStatus.assessment_required) {
+        wx.showModal({
+          title: '先完成学习设置',
+          content: '你还没有完成学习目标或水平测试，系统将带你去设置页继续。',
+          showCancel: false,
+          success: () => wx.switchTab({ url: '/pages/modes/index' }),
+        })
+        return
+      }
+      await this.bootstrap()
+    } catch (error) {
+      this.setData({
+        error: error instanceof Error ? error.message : '加载学习状态失败',
+      })
+    }
   },
   async bootstrap() {
     this.setData({ loading: true, error: '' })
@@ -104,6 +129,15 @@ Page<HistoryData>({
     })
     wx.navigateTo({ url: '/pages/chat/index?source=history' })
   },
+  playPronunciation(event: WechatMiniprogram.CustomEvent<{ url: string }>) {
+    const url = String(event.currentTarget.dataset.url || '')
+    if (!url) return
+    if (!historyPronunciationPlayer) {
+      historyPronunciationPlayer = wx.createInnerAudioContext()
+    }
+    historyPronunciationPlayer.src = resolveAudioURL(url)
+    historyPronunciationPlayer.play()
+  },
   syncExplainContext(items: UserQuestion[]) {
     setExplainContext({
       page: 'history',
@@ -115,5 +149,8 @@ Page<HistoryData>({
         user_answer: item.answer_text,
       })),
     })
+  },
+  onUnload() {
+    historyPronunciationPlayer?.stop()
   },
 })

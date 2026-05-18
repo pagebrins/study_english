@@ -1,5 +1,5 @@
 const miniappConfig = {
-  apiBaseUrl: 'https://example.com/api/v1',
+  apiBaseUrl: 'https://kiwix.top:8091/api/v1',
   requestTimeoutMs: 120000,
   storageKeys: {
     token: 'study_english_token',

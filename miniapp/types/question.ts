@@ -1,7 +1,11 @@
+import type { Pronunciation } from './pronunciation'
+
 export type GeneratedQuestion = {
   question: string
   answer_key: string
   pre_generated_id?: number
+  question_pronunciation?: Pronunciation
+  answer_key_pronunciation?: Pronunciation
 }
 
 export type UserQuestion = {
@@ -12,6 +16,8 @@ export type UserQuestion = {
   answer_text: string
   score: number
   pre_generated_id?: number
+  question_pronunciation?: Pronunciation
+  answer_key_pronunciation?: Pronunciation
   create_time: string
 }
 

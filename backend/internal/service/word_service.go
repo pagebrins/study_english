@@ -17,7 +17,12 @@ type WordService struct {
 func NewWordService(repo *repository.Repository) *WordService { return &WordService{repo: repo} }
 
 func (s *WordService) List(requestID string, word, l1Category, l2Category, tag *string) ([]model.Word, error) {
-	return s.repo.ListWords(requestID, word, l1Category, l2Category, tag)
+	items, err := s.repo.ListWords(requestID, word, l1Category, l2Category, tag)
+	if err != nil {
+		return nil, err
+	}
+	enrichWordsWithPronunciation(items)
+	return items, nil
 }
 
 func (s *WordService) Create(requestID string, word *model.Word) error {

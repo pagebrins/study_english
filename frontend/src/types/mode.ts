@@ -6,6 +6,8 @@ export type StudyMode = {
   numbers: number
   type: number
   mode: number
+  source: 'manual' | 'plan_auto'
+  plan_item_id?: number
   theme_id?: number
   theme_path?: string
   requirements: string[]

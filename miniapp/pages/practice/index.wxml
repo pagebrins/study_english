@@ -16,6 +16,14 @@
   <view wx:for="{{generated}}" wx:key="index" class="question-card question-item">
     <text class="question-index">第 {{index + 1}} 题</text>
     <text class="question-text">{{item.question}}</text>
+    <button
+      wx:if="{{item.question_pronunciation && item.question_pronunciation.audio_url}}"
+      class="secondary-button pronunciation-button"
+      data-url="{{item.question_pronunciation.audio_url}}"
+      bindtap="playPronunciation"
+    >
+      播放英文题干
+    </button>
     <textarea
       class="field-textarea"
       placeholder="请输入你的答案"
@@ -31,6 +39,14 @@
       <text class="issue-title">问题反馈</text>
       <text wx:for="{{issues[index]}}" wx:key="*this" class="issue-item">{{item}}</text>
       <text class="success-text">标准答案：{{item.answer_key}}</text>
+      <button
+        wx:if="{{item.answer_key_pronunciation && item.answer_key_pronunciation.audio_url}}"
+        class="secondary-button pronunciation-button"
+        data-url="{{item.answer_key_pronunciation.audio_url}}"
+        bindtap="playPronunciation"
+      >
+        播放英文答案
+      </button>
     </view>
 
     <view wx:if="{{issues[index] && issues[index].length === 0}}" class="issue-box ok-box">

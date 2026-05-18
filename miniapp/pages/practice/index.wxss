@@ -29,6 +29,10 @@
   margin-top: 20rpx;
 }
 
+.pronunciation-button {
+  margin-bottom: 20rpx;
+}
+
 .issue-box {
   margin-top: 22rpx;
   padding: 20rpx;
