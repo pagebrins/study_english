@@ -52,7 +52,7 @@ Page<HistoryData>({
           title: '先完成学习设置',
           content: '你还没有完成学习目标或水平测试，系统将带你去设置页继续。',
           showCancel: false,
-          success: () => wx.switchTab({ url: '/pages/modes/index' }),
+          success: () => wx.switchTab({ url: '/pages/study/index' }),
         })
         return
       }
@@ -67,7 +67,7 @@ Page<HistoryData>({
     this.setData({ loading: true, error: '' })
     try {
       const [modes, items, today] = await Promise.all([
-        modeService.list(this.data.selectedType),
+        modeService.list({ type: this.data.selectedType }),
         questionService.list({
           type: this.data.selectedType,
           mode_ids: this.data.selectedModeID ? [this.data.selectedModeID] : undefined,
@@ -152,5 +152,8 @@ Page<HistoryData>({
   },
   onUnload() {
     historyPronunciationPlayer?.stop()
+  },
+  goPractice() {
+    wx.switchTab({ url: '/pages/practice/index' })
   },
 })

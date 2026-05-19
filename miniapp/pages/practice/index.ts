@@ -42,7 +42,7 @@ Page<PracticeData>({
           title: '先完成学习设置',
           content: '你还没有完成学习目标或水平测试，系统将带你去设置页继续。',
           showCancel: false,
-          success: () => wx.switchTab({ url: '/pages/modes/index' }),
+          success: () => wx.switchTab({ url: '/pages/study/index' }),
         })
         return
       }
@@ -57,7 +57,7 @@ Page<PracticeData>({
   async generateQuestions() {
     const { mode, loading } = this.data
     if (!mode || loading) {
-      if (!mode) wx.showToast({ title: '请先去模式页选择模式', icon: 'none' })
+      if (!mode) wx.showToast({ title: '请先去学习页选择任务', icon: 'none' })
       return
     }
     this.setData({ loading: true, error: '', generated: [], answers: [], issues: [] })
@@ -131,6 +131,9 @@ Page<PracticeData>({
   goChat() {
     this.syncExplainContext()
     wx.navigateTo({ url: '/pages/chat/index?source=practice' })
+  },
+  goStudy() {
+    wx.switchTab({ url: '/pages/study/index' })
   },
   syncExplainContext(currentQuestionIndex?: number) {
     const mode = this.data.mode

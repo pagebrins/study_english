@@ -1,0 +1,150 @@
+.dashboard-hero {
+  padding: 36rpx;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18rpx;
+  margin-top: 28rpx;
+}
+
+.metric-card {
+  padding: 22rpx 20rpx;
+  border-radius: 22rpx;
+  background: rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(12rpx);
+}
+
+.metric-value {
+  display: block;
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.metric-label {
+  display: block;
+  margin-top: 8rpx;
+  color: #475569;
+  font-size: 22rpx;
+}
+
+.hero-actions,
+.section-head,
+.recent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.hero-actions {
+  margin-top: 28rpx;
+}
+
+.action-button {
+  flex: 1;
+}
+
+.section-spacing,
+.task-card,
+.recent-card {
+  margin-top: 24rpx;
+}
+
+.notice-card {
+  margin-top: 24rpx;
+  padding: 28rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
+}
+
+.notice-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #9a3412;
+}
+
+.notice-copy {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #c2410c;
+}
+
+.task-card,
+.recent-card {
+  padding: 26rpx;
+  border-radius: 24rpx;
+  background: #f8fafc;
+}
+
+.task-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.task-title,
+.quick-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.task-description,
+.recent-question,
+.recent-answer,
+.quick-copy {
+  display: block;
+  margin-top: 12rpx;
+  color: #475569;
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.tag {
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: #ecfeff;
+  color: #0f766e;
+  font-size: 22rpx;
+}
+
+.recent-score {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+.recent-time {
+  color: #94a3b8;
+  font-size: 22rpx;
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+  margin-top: 24rpx;
+}
+
+.quick-tile {
+  padding: 28rpx;
+  border-radius: 24rpx;
+  border: none;
+  text-align: left;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 10rpx 30rpx rgba(15, 23, 42, 0.08);
+}

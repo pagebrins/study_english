@@ -1,7 +1,10 @@
 <view class="page">
-  <view class="hero-card history-hero">
+  <view class="hero-card history-hero aurora-card">
     <text class="section-title">历史记录与复盘</text>
     <text class="section-subtitle">今日平均分 {{score}}，已答 {{answered}} 题。可以按学习类型和模式快速回看。</text>
+    <view class="hero-actions">
+      <button class="primary-button action-button" bindtap="goPractice">继续练习</button>
+    </view>
   </view>
 
   <view class="section-card filter-card">

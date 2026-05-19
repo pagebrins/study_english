@@ -178,6 +178,9 @@ Page<ModePageData>({
     }
     wx.switchTab({ url: '/pages/practice/index' })
   },
+  goDashboard() {
+    wx.switchTab({ url: '/pages/dashboard/index' })
+  },
   onLogout() {
     clearSession()
     wx.reLaunch({ url: '/pages/login/index' })

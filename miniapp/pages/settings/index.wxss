@@ -1,0 +1,87 @@
+.settings-hero {
+  padding: 36rpx;
+}
+
+.tab-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.tab-row {
+  display: inline-flex;
+  gap: 16rpx;
+}
+
+.tab-chip {
+  padding: 0 26rpx;
+  height: 76rpx;
+  border-radius: 999rpx;
+  border: none;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 26rpx;
+}
+
+.tab-chip.active {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.field-spacing,
+.settings-item-card,
+.permission-row {
+  margin-top: 20rpx;
+}
+
+.dual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.settings-item-card {
+  padding: 26rpx;
+  border-radius: 24rpx;
+  background: #f8fafc;
+}
+
+.permission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  padding: 24rpx;
+  border-radius: 22rpx;
+  background: #f8fafc;
+}
+
+.permission-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.permission-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.permission-code {
+  color: #64748b;
+  font-size: 22rpx;
+}
+
+.mini-picker {
+  min-width: 180rpx;
+  padding: 14rpx 20rpx;
+  border-radius: 16rpx;
+  background: #ecfeff;
+  color: #0f766e;
+  text-align: center;
+  font-size: 24rpx;
+}
+
+.role-user-head {
+  margin-top: 28rpx;
+}

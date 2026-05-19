@@ -1,9 +1,11 @@
 {
   "pages": [
     "pages/login/index",
-    "pages/modes/index",
+    "pages/dashboard/index",
+    "pages/study/index",
     "pages/practice/index",
     "pages/history/index",
+    "pages/settings/index",
     "pages/chat/index"
   ],
   "window": {
@@ -20,7 +22,11 @@
     "borderStyle": "black",
     "list": [
       {
-        "pagePath": "pages/modes/index",
+        "pagePath": "pages/dashboard/index",
+        "text": "总览"
+      },
+      {
+        "pagePath": "pages/study/index",
         "text": "学习"
       },
       {
@@ -30,6 +36,10 @@
       {
         "pagePath": "pages/history/index",
         "text": "历史"
+      },
+      {
+        "pagePath": "pages/settings/index",
+        "text": "设置"
       }
     ]
   },

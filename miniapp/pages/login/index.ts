@@ -8,7 +8,7 @@ Page({
   },
   onShow() {
     if (isLoggedIn()) {
-      wx.switchTab({ url: '/pages/modes/index' })
+      wx.switchTab({ url: '/pages/dashboard/index' })
     }
   },
   async onWechatLogin() {
@@ -16,7 +16,7 @@ Page({
     this.setData({ loading: true, error: '' })
     try {
       await ensureWechatLogin()
-      wx.switchTab({ url: '/pages/modes/index' })
+      wx.switchTab({ url: '/pages/dashboard/index' })
     } catch (error) {
       this.setData({
         error: error instanceof Error ? error.message : '微信登录失败，请稍后重试',

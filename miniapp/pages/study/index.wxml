@@ -1,7 +1,8 @@
 <view class="page">
-  <view class="hero-card mode-hero">
-    <text class="section-title">{{userName}}，今天由系统来安排学习</text>
-    <text class="section-subtitle">先设置唯一学习目标，再完成单词和句子测评，之后系统会自动生成训练计划，并在需要时安排次日难度测试。</text>
+  <view class="hero-card mode-hero aurora-card">
+    <text class="eyebrow">Study Plan</text>
+    <text class="section-title">{{userName}}，把今天的学习任务排明白</text>
+    <text class="section-subtitle">这里对应 Web 端的学习页：先完成目标和测评，再从系统计划里挑一项任务，进入练习会更顺手。</text>
     <view class="type-group">
       <button class="{{selectedType === 1 ? 'type-chip active' : 'type-chip'}}" data-value="1" bindtap="onTypeChange">单词</button>
       <button class="{{selectedType === 2 ? 'type-chip active' : 'type-chip'}}" data-value="2" bindtap="onTypeChange">句子</button>
@@ -9,7 +10,7 @@
     </view>
     <view class="hero-actions">
       <button class="primary-button action-button" bindtap="goPractice">开始练习</button>
-      <button class="ghost-button action-button ghost" bindtap="onLogout">退出登录</button>
+      <button class="secondary-button action-button soft-button" bindtap="goDashboard">返回总览</button>
     </view>
   </view>
 
@@ -70,6 +71,16 @@
     <button class="secondary-button submit-button" loading="{{savingGoal}}" bindtap="saveGoal">更新目标并重新测评</button>
   </view>
 
+  <view wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && bundle.plan}}" class="section-card planner-card">
+    <text class="section-title">今日计划概览</text>
+    <text class="section-subtitle">{{bundle.plan.title}}</text>
+    <view class="profile-metrics">
+      <text class="meta-text">计划日期 {{bundle.plan.plan_date}}</text>
+      <text class="meta-text">任务数 {{bundle.items.length}}</text>
+      <text class="meta-text">状态 {{bundle.plan.status}}</text>
+    </view>
+  </view>
+
   <empty-state
     wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && visibleItems.length === 0}}"
     title="当前分类下暂无任务"
@@ -90,5 +101,9 @@
     <view wx:if="{{item.requirements.length > 0}}" class="requirement-list">
       <text wx:for="{{item.requirements}}" wx:key="*this" class="requirement-item">{{item}}</text>
     </view>
+  </view>
+
+  <view class="bottom-actions">
+    <button class="ghost-button bottom-button" bindtap="onLogout">退出登录</button>
   </view>
 </view>

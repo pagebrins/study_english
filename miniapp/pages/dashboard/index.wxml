@@ -1,0 +1,112 @@
+<view class="page page-with-bottom-space">
+  <view class="hero-card dashboard-hero aurora-card">
+    <text class="eyebrow">Daily Brief</text>
+    <text class="section-title">{{userName}}，今天继续稳一点往前走</text>
+    <text class="section-subtitle">
+      {{bundle.goal_required ? '先补全学习目标，系统才能开始生成你的每日任务。' : bundle.assessment_required ? '完成当前测评后，系统会自动刷新你的学习计划。' : (bundle.profile ? ('目标：' + bundle.profile.goal) : '今天的计划已经准备好了。')}}
+    </text>
+    <view class="metric-grid">
+      <view class="metric-card">
+        <text class="metric-value">{{todayAnswered}}</text>
+        <text class="metric-label">今日答题</text>
+      </view>
+      <view class="metric-card">
+        <text class="metric-value">{{todayScore}}</text>
+        <text class="metric-label">今日均分</text>
+      </view>
+      <view class="metric-card">
+        <text class="metric-value">{{bundle.items.length}}</text>
+        <text class="metric-label">计划任务</text>
+      </view>
+    </view>
+    <view class="hero-actions">
+      <button class="primary-button action-button" bindtap="goStudy">看今日任务</button>
+      <button class="secondary-button action-button soft-button" bindtap="goPractice">直接开练</button>
+    </view>
+  </view>
+
+  <view wx:if="{{error}}" class="section-card section-spacing">
+    <text class="error-text">{{error}}</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="section-card section-spacing">
+    <text class="muted">正在整理今天的学习看板...</text>
+  </view>
+
+  <view wx:if="{{!loading}}" class="section-card section-spacing">
+    <view class="section-head">
+      <view>
+        <text class="section-title">今日计划</text>
+        <text class="section-subtitle">按题型切换，快速选择当前要练的任务。</text>
+      </view>
+      <button class="ghost-button compact-button" bindtap="goStudy">完整学习页</button>
+    </view>
+    <view class="type-group">
+      <button class="{{selectedType === 1 ? 'type-chip active' : 'type-chip'}}" data-value="1" bindtap="onTypeChange">单词</button>
+      <button class="{{selectedType === 2 ? 'type-chip active' : 'type-chip'}}" data-value="2" bindtap="onTypeChange">句子</button>
+      <button class="{{selectedType === 3 ? 'type-chip active' : 'type-chip'}}" data-value="3" bindtap="onTypeChange">文章</button>
+    </view>
+
+    <view wx:if="{{bundle.goal_required || bundle.assessment_required}}" class="notice-card warm">
+      <text class="notice-title">还不能直接开始刷题</text>
+      <text class="notice-copy">先去学习页完成目标设置或当前测评，之后这里会自动出现可选任务。</text>
+      <button class="primary-button submit-button" bindtap="goStudy">去学习页继续</button>
+    </view>
+
+    <empty-state
+      wx:if="{{!bundle.goal_required && !bundle.assessment_required && visibleItems.length === 0}}"
+      title="当前题型还没有任务"
+      description="切换上面的题型，或者先去学习页刷新你的计划。"
+    />
+
+    <view wx:for="{{visibleItems}}" wx:key="id" class="task-card" data-id="{{item.id}}" bindtap="onChooseTask">
+      <view class="task-head">
+        <text class="task-title">{{item.name}}</text>
+        <text class="pill">Lv{{item.level}}</text>
+      </view>
+      <text class="task-description">{{item.description}}</text>
+      <view class="tag-row">
+        <text class="tag">{{item.study_type === 1 ? '单词' : item.study_type === 2 ? '句子' : '文章'}}</text>
+        <text class="tag">{{item.translation_mode === 1 ? '中译英' : '英译中'}}</text>
+        <text class="tag">{{item.numbers}} 题</text>
+      </view>
+      <view wx:if="{{item.requirements.length > 0}}" class="requirement-list">
+        <text wx:for="{{item.requirements}}" wx:key="*this" class="requirement-item">{{item}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading}}" class="section-card section-spacing">
+    <view class="section-head">
+      <view>
+        <text class="section-title">最近记录</text>
+        <text class="section-subtitle">复习最近几题，错题可以继续追问 AI。</text>
+      </view>
+      <button class="ghost-button compact-button" bindtap="goHistory">查看全部</button>
+    </view>
+    <empty-state
+      wx:if="{{recentItems.length === 0}}"
+      title="最近还没有答题记录"
+      description="去练习页做几题，这里就会自动生成你的学习轨迹。"
+    />
+    <view wx:for="{{recentItems}}" wx:key="id" class="recent-card">
+      <view class="recent-head">
+        <text class="recent-score">{{item.score}} 分</text>
+        <text class="recent-time">{{item.create_time}}</text>
+      </view>
+      <text class="recent-question">{{item.question}}</text>
+      <text class="recent-answer">你的答案：{{item.answer_text || '未填写'}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading}}" class="quick-grid">
+    <button class="quick-tile" bindtap="goPractice">
+      <text class="quick-title">开始练习</text>
+      <text class="quick-copy">直接生成题目并作答</text>
+    </button>
+    <button class="quick-tile" bindtap="goSettings">
+      <text class="quick-title">进入设置</text>
+      <text class="quick-copy">管理模式、知识库与权限</text>
+    </button>
+  </view>
+</view>

@@ -32,10 +32,6 @@
   flex: 1;
 }
 
-.ghost {
-  height: 88rpx;
-}
-
 .feedback-card,
 .mode-card,
 .planner-card {
@@ -130,4 +126,12 @@
 
 .pronunciation-button {
   margin-bottom: 16rpx;
+}
+
+.bottom-actions {
+  margin-top: 24rpx;
+}
+
+.bottom-button {
+  width: 100%;
 }

@@ -3,7 +3,7 @@
     <text class="login-kicker">Study English</text>
     <text class="login-title">把练习、复盘和 AI 讲解带进微信</text>
     <text class="login-description">
-      首版小程序支持微信登录、模式选择、练习答题、历史记录和 AI 讲解。
+      现在的小程序已经覆盖总览、学习计划、练习答题、历史复盘、AI 讲解和设置中心。
     </text>
 
     <button class="primary-button" loading="{{loading}}" bindtap="onWechatLogin">

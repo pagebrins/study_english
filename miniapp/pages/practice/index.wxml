@@ -1,14 +1,15 @@
 <view class="page">
-  <view class="hero-card practice-hero">
+  <view class="hero-card practice-hero aurora-card">
     <text class="section-title">{{mode ? mode.name : '请先选择模式'}}</text>
     <text class="section-subtitle">
-      {{mode ? ('当前方向：' + (mode.mode === 1 ? '中译英' : '英译中') + '，题量 ' + mode.numbers) : '去“模式”页选择后，再回来生成练习题。'}}
+      {{mode ? ('当前方向：' + (mode.mode === 1 ? '中译英' : '英译中') + '，题量 ' + mode.numbers) : '先去“学习”页选一个今日任务，再回来生成练习题。'}}
     </text>
     <view class="hero-actions">
       <button class="primary-button action-button" bindtap="generateQuestions" loading="{{loading}}">
         {{loading ? '生成中...' : '生成题目'}}
       </button>
-      <button class="secondary-button action-button" bindtap="goChat">AI 讲解</button>
+      <button wx:if="{{mode}}" class="secondary-button action-button" bindtap="goChat">AI 讲解</button>
+      <button wx:else class="secondary-button action-button" bindtap="goStudy">去学习页</button>
     </view>
     <text wx:if="{{error}}" class="error-text">{{error}}</text>
   </view>
