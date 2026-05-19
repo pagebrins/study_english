@@ -41,3 +41,10 @@ hs_err_pid*
 */target/
 backend/.env
 frontend/.env
+
+# Miniapp compiled JS artifacts
+miniapp/app.js
+miniapp/components/**/*.js
+miniapp/pages/**/*.js
+miniapp/services/**/*.js
+miniapp/utils/**/*.js
