@@ -63,7 +63,7 @@
             {{submittingAnswerIndex === index ? '提交中...' : '提交答案'}}
           </button>
 
-          <view wx:if="{{issues[index] && issues[index].length > 0}}" class="issue-box">
+          <view wx:if="{{reviewed[index] && issues[index] && issues[index].length > 0}}" class="issue-box">
             <text class="issue-title">问题反馈</text>
             <text wx:for="{{issues[index]}}" wx:for-item="issue" wx:key="*this" class="issue-item">{{issue}}</text>
             <text class="success-text">标准答案：{{questionItem.answer_key}}</text>
@@ -77,7 +77,7 @@
             </button>
           </view>
 
-          <view wx:if="{{issues[index] && issues[index].length === 0}}" class="issue-box ok-box">
+          <view wx:if="{{reviewed[index] && issues[index] && issues[index].length === 0}}" class="issue-box ok-box">
             <text class="success-text">回答不错，这题已经通过。</text>
           </view>
         </view>

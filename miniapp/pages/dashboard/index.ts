@@ -8,6 +8,19 @@ import type { LearningPlanBundle, LearningPlanItem } from '../../types/learningP
 import type { StudyMode } from '../../types/mode'
 import type { UserQuestion } from '../../types/question'
 
+type OverviewCalendarDay = {
+  key: string
+  label: string
+  day: string
+  dateNumber: number
+  isCurrentMonth: boolean
+  isToday: boolean
+  isPlanDay: boolean
+  isAssessmentDay: boolean
+  isStudied: boolean
+  isMissed: boolean
+}
+
 type DashboardData = {
   loading: boolean
   error: string
@@ -27,6 +40,10 @@ type DashboardData = {
   canChat: boolean
   canSettings: boolean
   onboardingIncomplete: boolean
+  calendarDays: OverviewCalendarDay[]
+  goalSummary: string
+  assessmentLabel: string
+  calendarMonthLabel: string
 }
 
 const emptyBundle: LearningPlanBundle = {
@@ -35,6 +52,22 @@ const emptyBundle: LearningPlanBundle = {
   goal_required: false,
   assessment_required: false,
   plan_generation_required: false,
+}
+
+const formatDateKey = (date: Date) => {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const parseDate = (value?: string) => {
+  if (!value) return null
+  const direct = new Date(value)
+  if (!Number.isNaN(direct.getTime())) return direct
+  const normalized = new Date(`${value}T00:00:00`)
+  if (!Number.isNaN(normalized.getTime())) return normalized
+  return null
 }
 
 Page<DashboardData>({
@@ -57,6 +90,10 @@ Page<DashboardData>({
     canChat: false,
     canSettings: false,
     onboardingIncomplete: false,
+    calendarDays: [],
+    goalSummary: '',
+    assessmentLabel: '',
+    calendarMonthLabel: '',
   },
   onShow() {
     if (!requireLogin()) return
@@ -97,6 +134,8 @@ Page<DashboardData>({
       const visibleItems = bundle.items.filter((item) => item.study_type === this.data.selectedType)
       const featuredItem = visibleItems[0] ?? null
       const plannedMinutes = visibleItems.reduce((sum, item) => sum + (item.estimated_minutes || 0), 0)
+      const calendarDays = this.buildCalendarDays(bundle, recentItems)
+      const referenceDate = parseDate(bundle.plan?.plan_date) ?? new Date()
       this.setData({
         bundle,
         onboardingIncomplete: bundle.goal_required || bundle.assessment_required || bundle.plan_generation_required,
@@ -107,6 +146,12 @@ Page<DashboardData>({
         todayAnswered: today.answered,
         plannedMinutes,
         selectedModeName: getSelectedMode()?.name ?? '',
+        calendarDays,
+        goalSummary: bundle.plan?.goal_summary || bundle.profile?.goal || '',
+        assessmentLabel: bundle.profile?.last_assessment_at
+          ? `入门测试 ${formatDateKey(new Date(bundle.profile.last_assessment_at))}`
+          : '入门测试日期待记录',
+        calendarMonthLabel: `${referenceDate.getFullYear()}年${referenceDate.getMonth() + 1}月`,
       })
     } catch (error) {
       this.setData({
@@ -115,6 +160,58 @@ Page<DashboardData>({
     } finally {
       this.setData({ loading: false })
     }
+  },
+  buildCalendarDays(bundle: LearningPlanBundle, recentItems: UserQuestion[]) {
+    const referenceDate = parseDate(bundle.plan?.plan_date) ?? new Date()
+    const today = new Date()
+    const monthStart = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1)
+    const start = new Date(monthStart)
+    const weekday = monthStart.getDay() || 7
+    start.setDate(monthStart.getDate() - (weekday - 1))
+    const monthEnd = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0)
+    const planKey = bundle.plan?.plan_date ? formatDateKey(new Date(bundle.plan.plan_date)) : ''
+    const assessmentDate = parseDate(bundle.profile?.last_assessment_at)
+      ?? parseDate(bundle.assessment?.completed_at)
+      ?? parseDate(bundle.assessment?.created_at)
+    const assessmentKey = assessmentDate ? formatDateKey(assessmentDate) : ''
+    const shouldShowMissed = Boolean(bundle.plan?.plan_date)
+    const studiedKeys = new Set(
+      recentItems
+        .map((item) => parseDate(item.create_time))
+        .filter((item): item is Date => Boolean(item))
+        .map((item) => formatDateKey(item)),
+    )
+
+    const totalCells = Math.ceil((weekday - 1 + monthEnd.getDate()) / 7) * 7
+    return Array.from({ length: totalCells }).map((_, index) => {
+      const current = new Date(start)
+      current.setDate(start.getDate() + index)
+      const key = formatDateKey(current)
+      const isToday =
+        current.getFullYear() === today.getFullYear() &&
+        current.getMonth() === today.getMonth() &&
+        current.getDate() === today.getDate()
+      const isAssessmentDay = Boolean(assessmentKey) && key === assessmentKey
+      const isStudied = studiedKeys.has(key)
+      const isPlanDay = Boolean(planKey) && key === planKey
+      const isMissed =
+        shouldShowMissed &&
+        current < new Date(today.getFullYear(), today.getMonth(), today.getDate()) &&
+        !isStudied &&
+        !isAssessmentDay
+      return {
+        key,
+        label: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index % 7],
+        day: `${current.getMonth() + 1}/${current.getDate()}`,
+        dateNumber: current.getDate(),
+        isCurrentMonth: current.getMonth() === referenceDate.getMonth(),
+        isToday,
+        isPlanDay,
+        isAssessmentDay,
+        isStudied,
+        isMissed,
+      }
+    })
   },
   onTypeChange(event: WechatMiniprogram.CustomEvent) {
     const selectedType = Number(event.currentTarget.dataset.value)
@@ -125,6 +222,8 @@ Page<DashboardData>({
   onChooseTask(event: WechatMiniprogram.CustomEvent) {
     const itemID = Number(event.currentTarget.dataset.id)
     const selected = this.data.visibleItems.find((item) => item.id === itemID)
+    if (!selected) return
+    this.setData({ featuredItem: selected, selectedModeName: selected.name })
     this.applyModeFromItem(selected)
   },
   applyModeFromItem(item?: LearningPlanItem | null) {
@@ -144,7 +243,7 @@ Page<DashboardData>({
       requirements: item.requirements,
     }
     setSelectedMode(mode)
-    this.setData({ selectedModeName: mode.name })
+    this.setData({ selectedModeName: mode.name, featuredItem: item ?? this.data.featuredItem })
     wx.showToast({ title: '已切换任务', icon: 'success' })
     return true
   },

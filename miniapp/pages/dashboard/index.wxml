@@ -12,94 +12,84 @@
   </view>
 
   <block wx:if="{{!loading && canView && !onboardingIncomplete}}">
-    <view class="hero-shell">
-      <view class="hero-card dashboard-hero aurora-card">
-        <view class="hero-topline">
-          <text class="eyebrow">Today Dashboard</text>
-          <text class="role-chip">{{roleName}}</text>
+    <view class="overview-stage">
+      <view class="overview-head">
+        <view>
+          <text class="overview-title">今天学什么</text>
+          <text class="overview-copy">目标：{{goalSummary || '先在学习页生成目标和学习计划。'}}</text>
         </view>
-        <text class="hero-title">{{userName}}，今天先把最值得做的练起来</text>
-        <text class="hero-copy">{{selectedModeName ? ('当前已锁定任务：' + selectedModeName) : '今天的计划已经展开，先挑一项开始。'}}</text>
+        <text class="role-chip dark-role-chip">{{roleName}}</text>
+      </view>
 
-        <view class="hero-stats">
-          <view class="stat-panel emphasis">
-            <text class="stat-value">{{todayAnswered}}</text>
-            <text class="stat-label">今日已答</text>
-          </view>
-          <view class="stat-panel">
-            <text class="stat-value">{{todayScore}}</text>
-            <text class="stat-label">今日均分</text>
-          </view>
-          <view class="stat-panel">
-            <text class="stat-value">{{plannedMinutes || '--'}}</text>
-            <text class="stat-label">计划分钟</text>
-          </view>
+      <view class="overview-actions">
+        <button class="primary-button action-button" bindtap="goStudy">开始学习</button>
+        <button class="secondary-button action-button soft-button" bindtap="goHistory">开始复习</button>
+      </view>
+    </view>
+
+    <view class="section-card calendar-card">
+      <view class="section-head compact-head">
+        <view>
+          <text class="section-title">本月学习日历</text>
+          <text class="section-subtitle">按月展示入门测试日、计划日和未学习日期。</text>
         </view>
+        <view class="calendar-head-meta">
+          <text class="calendar-month">{{calendarMonthLabel}}</text>
+          <text class="calendar-caption">{{assessmentLabel}}</text>
+        </view>
+      </view>
 
-        <view class="hero-actions">
-          <button class="primary-button action-button" bindtap="goPractice">开始今天练习</button>
-          <button class="secondary-button action-button soft-button" bindtap="goStudy">进入学习页</button>
+      <view class="calendar-week-head">
+        <text class="calendar-week-label">Mon</text>
+        <text class="calendar-week-label">Tue</text>
+        <text class="calendar-week-label">Wed</text>
+        <text class="calendar-week-label">Thu</text>
+        <text class="calendar-week-label">Fri</text>
+        <text class="calendar-week-label">Sat</text>
+        <text class="calendar-week-label">Sun</text>
+      </view>
+
+      <view class="calendar-grid">
+        <view wx:for="{{calendarDays}}" wx:key="key" class="{{item.isCurrentMonth ? (item.isAssessmentDay ? 'calendar-day-card assessment' : item.isPlanDay ? 'calendar-day-card plan' : item.isStudied ? 'calendar-day-card studied' : item.isMissed ? 'calendar-day-card missed' : item.isToday ? 'calendar-day-card today' : 'calendar-day-card') : 'calendar-day-card muted-day'}}">
+          <text class="calendar-date">{{item.dateNumber}}</text>
+          <text class="calendar-tag">{{item.isAssessmentDay ? '测试' : item.isPlanDay ? '计划' : item.isStudied ? '已学' : item.isMissed ? '未学' : item.isToday ? '今天' : ''}}</text>
+        </view>
+      </view>
+
+      <view class="calendar-legend">
+        <view class="legend-item">
+          <text class="legend-dot assessment-dot"></text>
+          <text class="legend-label">入门测试</text>
+        </view>
+        <view class="legend-item">
+          <text class="legend-dot plan-dot"></text>
+          <text class="legend-label">计划日期</text>
+        </view>
+        <view wx:if="{{bundle.plan && bundle.plan.plan_date}}" class="legend-item">
+          <text class="legend-dot missed-dot"></text>
+          <text class="legend-label">未学习</text>
         </view>
       </view>
     </view>
 
-    <view class="focus-grid section-spacing">
-      <view class="section-card focus-card spotlight-card">
-        <view class="section-head compact-head">
-          <view>
-            <text class="section-title">今日主线</text>
-            <text class="section-subtitle">优先选一条任务，把手感先打热。</text>
-          </view>
-          <button class="ghost-button compact-button" bindtap="goStudy">全部计划</button>
+    <view wx:if="{{recentItems.length > 0}}" class="section-card feed-card dark-feed-card">
+      <view class="section-head compact-head">
+        <view>
+          <text class="section-title">最近轨迹</text>
+          <text class="section-subtitle">像 Web 一样，下面直接看最近几次答题记录。</text>
         </view>
-
-        <view class="type-group type-group-tight">
-          <button class="{{selectedType === 1 ? 'type-chip active' : 'type-chip'}}" data-value="1" bindtap="onTypeChange">单词</button>
-          <button class="{{selectedType === 2 ? 'type-chip active' : 'type-chip'}}" data-value="2" bindtap="onTypeChange">句子</button>
-          <button class="{{selectedType === 3 ? 'type-chip active' : 'type-chip'}}" data-value="3" bindtap="onTypeChange">文章</button>
-        </view>
-
-        <view wx:if="{{featuredItem}}" class="featured-task" data-id="{{featuredItem.id}}" bindtap="onChooseTask">
-          <view class="featured-head">
-            <view>
-              <text class="featured-kicker">推荐先做</text>
-              <text class="featured-title">{{featuredItem.name}}</text>
-            </view>
-            <text class="pill">Lv{{featuredItem.level}}</text>
-          </view>
-          <text class="featured-copy">{{featuredItem.description}}</text>
-          <view class="featured-meta">
-            <text class="meta-chip">{{featuredItem.study_type === 1 ? '单词' : featuredItem.study_type === 2 ? '句子' : '文章'}}</text>
-            <text class="meta-chip">{{featuredItem.translation_mode === 1 ? '中译英' : '英译中'}}</text>
-            <text class="meta-chip">{{featuredItem.numbers}} 题</text>
-            <text class="meta-chip">约 {{featuredItem.estimated_minutes || 0}} 分钟</text>
-          </view>
-        </view>
-
-        <empty-state wx:else title="当前题型还没有任务" description="你可以切换题型，或者先去学习页刷新计划。" />
+        <button class="ghost-button compact-button" bindtap="goHistory">全部历史</button>
       </view>
 
-      <view class="section-card feed-card">
-        <view class="section-head compact-head">
-          <view>
-            <text class="section-title">最近轨迹</text>
-            <text class="section-subtitle">做完后记得回看，节奏会更稳。</text>
-          </view>
-          <button class="ghost-button compact-button" bindtap="goHistory">全部历史</button>
+      <view wx:for="{{recentItems}}" wx:key="id" class="feed-row">
+        <view class="feed-score-block">
+          <text class="feed-score">{{item.score}}</text>
+          <text class="feed-score-label">分</text>
         </view>
-
-        <empty-state wx:if="{{recentItems.length === 0}}" title="还没有答题记录" description="去做第一轮练习，这里就会长出你的学习轨迹。" />
-
-        <view wx:for="{{recentItems}}" wx:key="id" class="feed-row">
-          <view class="feed-score-block">
-            <text class="feed-score">{{item.score}}</text>
-            <text class="feed-score-label">分</text>
-          </view>
-          <view class="feed-copy">
-            <text class="feed-question">{{item.question}}</text>
-            <text class="feed-answer">你的答案：{{item.answer_text || '未填写'}}</text>
-            <text class="feed-time">{{item.create_time}}</text>
-          </view>
+        <view class="feed-copy">
+          <text class="feed-question">{{item.question}}</text>
+          <text class="feed-answer">你的答案：{{item.answer_text || '未填写'}}</text>
+          <text class="feed-time">{{item.create_time}}</text>
         </view>
       </view>
     </view>

@@ -9,8 +9,16 @@ import type { StudyMode } from '../../types/mode'
 
 let pronunciationPlayer: WechatMiniprogram.InnerAudioContext | null = null
 
-const resolveAudioURL = (url: string) =>
-  /^https?:\/\//i.test(url) ? url : `${miniappConfig.apiBaseUrl}${url.startsWith('/') ? url : `/${url}`}`
+const resolveAudioURL = (url: string) => {
+  if (/^https?:\/\//i.test(url)) return url
+  const baseURL = miniappConfig.apiBaseUrl.replace(/\/$/, '')
+  const originMatch = baseURL.match(/^(https?:\/\/[^/]+)/i)
+  const origin = originMatch?.[1] ?? baseURL
+  if (url.startsWith('/')) {
+    return `${origin}${url}`
+  }
+  return `${baseURL}/${url}`
+}
 
 type CalendarDay = {
   key: string
@@ -37,6 +45,7 @@ type ModePageData = {
   generated: GeneratedQuestion[]
   answers: string[]
   issues: string[][]
+  reviewed: boolean[]
   submittingAnswerIndex: number
   goal: string
   dailyMinutes: number
@@ -109,6 +118,7 @@ Page<ModePageData>({
     generated: [],
     answers: [],
     issues: [],
+    reviewed: [],
     submittingAnswerIndex: -1,
     goal: '',
     dailyMinutes: 20,
@@ -192,6 +202,7 @@ Page<ModePageData>({
       generated: onboardingIncomplete ? [] : this.data.generated,
       answers: onboardingIncomplete ? [] : this.data.answers,
       issues: onboardingIncomplete ? [] : this.data.issues,
+      reviewed: onboardingIncomplete ? [] : this.data.reviewed,
       submittingAnswerIndex: onboardingIncomplete ? -1 : this.data.submittingAnswerIndex,
       goal: bundle.profile?.goal && bundle.profile.goal !== fallbackGoal ? bundle.profile.goal : '',
       dailyMinutes: bundle.profile?.daily_minutes ?? this.data.dailyMinutes,
@@ -350,6 +361,7 @@ Page<ModePageData>({
       generated: [],
       answers: [],
       issues: [],
+      reviewed: [],
       submittingAnswerIndex: -1,
     })
     try {
@@ -358,6 +370,7 @@ Page<ModePageData>({
         generated,
         answers: generated.map(() => ''),
         issues: generated.map(() => []),
+        reviewed: generated.map(() => false),
       })
     } catch (error) {
       this.setData({
@@ -389,7 +402,9 @@ Page<ModePageData>({
       })
       const issueMatrix = [...this.data.issues]
       issueMatrix[index] = issues
-      this.setData({ issues: issueMatrix })
+      const reviewed = [...this.data.reviewed]
+      reviewed[index] = true
+      this.setData({ issues: issueMatrix, reviewed })
       await questionService.create({
         mode_id: modeID,
         question: current.question,
@@ -412,7 +427,12 @@ Page<ModePageData>({
     if (!url) return
     if (!pronunciationPlayer) {
       pronunciationPlayer = wx.createInnerAudioContext()
+      pronunciationPlayer.obeyMuteSwitch = false
+      pronunciationPlayer.onError(() => {
+        wx.showToast({ title: '音频播放失败', icon: 'none' })
+      })
     }
+    pronunciationPlayer.stop()
     pronunciationPlayer.src = resolveAudioURL(url)
     pronunciationPlayer.play()
   },
