@@ -16,7 +16,7 @@ import (
 
 var englishTextPattern = regexp.MustCompile(`[A-Za-z]`)
 
-// PronunciationService builds English-only Google pronunciation resources.
+// PronunciationService builds English-only pronunciation resources.
 type PronunciationService struct {
 	client *http.Client
 }
@@ -43,7 +43,7 @@ func (s *PronunciationService) Build(text string, lang string) (*model.Pronuncia
 		Text:     trimmed,
 		Lang:     "en",
 		AudioURL: "/api/v1/pronunciations/stream?lang=en&text=" + url.QueryEscape(trimmed),
-		Provider: "google",
+		Provider: "youdao",
 	}, nil
 }
 
@@ -55,16 +55,16 @@ func (s *PronunciationService) TryBuildEnglish(text string) *model.Pronunciation
 	return item
 }
 
-func (s *PronunciationService) GoogleTTSURL(text string, lang string) (string, error) {
+func (s *PronunciationService) TTSURL(text string, lang string) (string, error) {
 	item, err := s.Build(text, lang)
 	if err != nil {
 		return "", err
 	}
-	return "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=" + item.Lang + "&q=" + url.QueryEscape(item.Text), nil
+	return "https://dict.youdao.com/dictvoice?audio=" + url.QueryEscape(item.Text) + "&type=2", nil
 }
 
 func (s *PronunciationService) FetchAudio(ctx context.Context, text string, lang string) (io.ReadCloser, string, int64, error) {
-	audioURL, err := s.GoogleTTSURL(text, lang)
+	audioURL, err := s.TTSURL(text, lang)
 	if err != nil {
 		return nil, "", 0, err
 	}
@@ -74,12 +74,11 @@ func (s *PronunciationService) FetchAudio(ctx context.Context, text string, lang
 		return nil, "", 0, err
 	}
 
-	// Use a browser-like UA because Google Translate TTS is stricter with
-	// generic media/embed requests than with normal browser fetches.
+	// Use a browser-like UA to reduce the chance of the upstream rejecting
+	// non-browser traffic.
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36")
 	req.Header.Set("Accept", "audio/mpeg,audio/*;q=0.9,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Referer", "https://translate.google.com/")
 
 	resp, err := s.client.Do(req)
 	if err != nil {
