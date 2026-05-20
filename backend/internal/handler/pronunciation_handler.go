@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"io"
 	"net/http"
+	"strconv"
 
 	"study_english/backend/internal/middleware"
 	"study_english/backend/internal/pkg/logger"
@@ -45,11 +47,22 @@ func (h *PronunciationHandler) Stream(ctx *gin.Context) {
 	requestID := middleware.GetRequestID(ctx)
 	text := ctx.Query("text")
 	lang := ctx.DefaultQuery("lang", "en")
-	audioURL, err := h.service.GoogleTTSURL(text, lang)
+	reader, contentType, contentLength, err := h.service.FetchAudio(ctx.Request.Context(), text, lang)
 	if err != nil {
 		logger.L().Warn("pronunciation stream rejected", zap.String("request_id", requestID), zap.Error(err))
-		response.JSON(ctx, http.StatusBadRequest, err.Error(), nil)
+		response.JSON(ctx, http.StatusBadGateway, err.Error(), nil)
 		return
 	}
-	ctx.Redirect(http.StatusFound, audioURL)
+	defer reader.Close()
+
+	ctx.Header("Content-Type", contentType)
+	ctx.Header("Cache-Control", "public, max-age=86400")
+	if contentLength >= 0 {
+		ctx.Header("Content-Length", strconv.FormatInt(contentLength, 10))
+	}
+	ctx.Status(http.StatusOK)
+
+	if _, err := io.Copy(ctx.Writer, reader); err != nil {
+		logger.L().Warn("pronunciation stream proxy failed", zap.String("request_id", requestID), zap.Error(err))
+	}
 }
