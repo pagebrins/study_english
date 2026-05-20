@@ -16,6 +16,11 @@ export const permissionService = {
       method: 'PUT',
       data: { role_id: roleID },
     }),
+  deleteUser: (userID: number) =>
+    request<boolean>({
+      url: `/users/${userID}`,
+      method: 'DELETE',
+    }),
   updateRolePermissions: (roleID: number, permissionIDs: number[]) =>
     request<boolean>({
       url: `/roles/${roleID}/permissions`,

@@ -247,6 +247,66 @@ func (r *Repository) ListUserRoles(requestID string) ([]model.UserRoleView, erro
 	return items, nil
 }
 
+func (r *Repository) DeleteUserDeep(requestID string, userID uint) error {
+	logger.L().Info("db delete user deep", zap.String("request_id", requestID), zap.Uint("user_id", userID))
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_id = ?", userID).Delete(&model.UserQuestion{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", userID).Delete(&model.PreGeneratedQuestion{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", userID).Delete(&model.Mode{}).Error; err != nil {
+			return err
+		}
+
+		var assessments []model.LearningAssessment
+		if err := tx.Where("user_id = ?", userID).Find(&assessments).Error; err != nil {
+			return err
+		}
+		if len(assessments) > 0 {
+			assessmentIDs := make([]uint, 0, len(assessments))
+			for _, assessment := range assessments {
+				assessmentIDs = append(assessmentIDs, assessment.ID)
+			}
+			if err := tx.Where("assessment_id IN ?", assessmentIDs).Delete(&model.LearningAssessmentItem{}).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("user_id = ?", userID).Delete(&model.LearningAssessment{}).Error; err != nil {
+			return err
+		}
+
+		var plans []model.LearningPlan
+		if err := tx.Where("user_id = ?", userID).Find(&plans).Error; err != nil {
+			return err
+		}
+		if len(plans) > 0 {
+			planIDs := make([]uint, 0, len(plans))
+			for _, plan := range plans {
+				planIDs = append(planIDs, plan.ID)
+			}
+			if err := tx.Where("plan_id IN ?", planIDs).Delete(&model.LearningPlanItem{}).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("user_id = ?", userID).Delete(&model.LearningPlan{}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where("user_id = ?", userID).Delete(&model.LearningProfile{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", userID).Delete(&model.UserRole{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&model.User{}, userID).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
 func (r *Repository) GetUserRole(requestID string, userID uint) (*model.Role, error) {
 	var role model.Role
 	err := r.db.Table("roles r").

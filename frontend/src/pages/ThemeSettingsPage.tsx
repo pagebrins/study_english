@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { Trash2 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Input } from '../components/ui/input'
@@ -73,7 +74,7 @@ const getWordPayload = (form: WordForm): WordPayload => ({
 
 export const ThemeSettingsPage = ({ onClose }: Props) => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const { allItems, error, fetchAll, create, update, remove } = useThemes()
   const {
     items: words,
@@ -297,6 +298,25 @@ export const ThemeSettingsPage = ({ onClose }: Props) => {
           }
         }),
       )
+    } catch (err) {
+      setPermissionError((err as Error).message)
+    } finally {
+      setPermissionPending(false)
+    }
+  }
+
+  const deleteUser = async (userID: number, name: string) => {
+    const confirmed = window.confirm(`确定删除 ${name || '该用户'} 吗？删除后将清空该用户的所有信息，且无法恢复。`)
+    if (!confirmed) return
+    setPermissionPending(true)
+    setPermissionError('')
+    try {
+      await permissionApi.deleteUser(userID)
+      if (user?.id === userID) {
+        logout()
+        return
+      }
+      setUserRoles((prev) => prev.filter((item) => item.user_id !== userID))
     } catch (err) {
       setPermissionError((err as Error).message)
     } finally {
@@ -601,20 +621,33 @@ export const ThemeSettingsPage = ({ onClose }: Props) => {
                     <p className="font-medium">{userRole.name}</p>
                     <p className="text-xs text-zinc-500">{userRole.email}</p>
                   </div>
-                  <select
-                    className="h-9 min-w-40 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm"
-                    value={userRole.role_id}
-                    onChange={(event) => {
-                      const roleID = Number(event.target.value)
-                      if (roleID > 0) void updateUserRole(userRole.user_id, roleID)
-                    }}
-                  >
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name} ({role.code})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="h-9 min-w-40 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm"
+                      value={userRole.role_id}
+                      onChange={(event) => {
+                        const roleID = Number(event.target.value)
+                        if (roleID > 0) void updateUserRole(userRole.user_id, roleID)
+                      }}
+                    >
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {role.name} ({role.code})
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-red-500/40 text-red-300 hover:bg-red-500/10"
+                      onClick={() => void deleteUser(userRole.user_id, userRole.name)}
+                      aria-label={`删除 ${userRole.name}`}
+                      title="删除用户"
+                      disabled={permissionPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </Card>

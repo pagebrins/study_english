@@ -90,3 +90,17 @@ func (h *PermissionHandler) UpdateRolePermissions(ctx *gin.Context) {
 	}
 	response.JSON(ctx, http.StatusOK, "ok", true)
 }
+
+func (h *PermissionHandler) DeleteUser(ctx *gin.Context) {
+	requestID := middleware.GetRequestID(ctx)
+	userIDRaw, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil || userIDRaw <= 0 {
+		response.JSON(ctx, http.StatusBadRequest, "invalid user id", nil)
+		return
+	}
+	if err := h.service.DeleteUser(requestID, uint(userIDRaw)); err != nil {
+		response.JSON(ctx, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+	response.JSON(ctx, http.StatusOK, "ok", true)
+}

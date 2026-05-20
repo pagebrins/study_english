@@ -6,7 +6,7 @@ export const permissionApi = {
   listUserRoles: () => getResult<UserRoleView[]>(http.get('/users/roles')),
   updateUserRole: (userID: number, roleID: number) =>
     getResult<boolean>(http.put(`/users/${userID}/role`, { role_id: roleID })),
+  deleteUser: (userID: number) => getResult<boolean>(http.delete(`/users/${userID}`)),
   updateRolePermissions: (roleID: number, permissionIDs: number[]) =>
     getResult<boolean>(http.put(`/roles/${roleID}/permissions`, { permission_ids: permissionIDs })),
 }
-

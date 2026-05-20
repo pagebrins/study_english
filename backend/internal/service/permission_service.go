@@ -76,3 +76,10 @@ func (s *PermissionService) UpdateRolePermissions(requestID string, roleID uint,
 	}
 	return s.repo.ReplaceRolePermissions(requestID, roleID, permissionIDs)
 }
+
+func (s *PermissionService) DeleteUser(requestID string, userID uint) error {
+	if _, err := s.repo.GetUserByID(requestID, userID); err != nil {
+		return errors.New("user not found")
+	}
+	return s.repo.DeleteUserDeep(requestID, userID)
+}

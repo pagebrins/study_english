@@ -32,7 +32,8 @@
 .hero-actions,
 .task-head,
 .permission-pills,
-.tag-row {
+.tag-row,
+.role-actions {
   display: flex;
 }
 
@@ -98,6 +99,11 @@
   gap: 16rpx;
 }
 
+.role-actions {
+  align-items: center;
+  gap: 14rpx;
+}
+
 .task-title {
   font-size: 30rpx;
   font-weight: 600;
@@ -151,6 +157,18 @@
   color: #0f766e;
   text-align: center;
   font-size: 24rpx;
+}
+
+.delete-user-button {
+  min-width: 96rpx;
+  padding: 14rpx 18rpx;
+  border-radius: 16rpx;
+  background: #fff1f2;
+  border: 2rpx solid #fecdd3;
+  color: #dc2626;
+  text-align: center;
+  font-size: 24rpx;
+  font-weight: 600;
 }
 
 .role-user-head {
@@ -212,4 +230,3 @@
   border-bottom: 2rpx solid #dbe4ea;
   transform: rotate(45deg);
 }
-

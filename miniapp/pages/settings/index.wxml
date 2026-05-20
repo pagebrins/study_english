@@ -111,9 +111,12 @@
           <text class="task-title">{{item.name}}</text>
           <text class="task-description">{{item.email}}</text>
         </view>
-        <picker mode="selector" range="{{roleNames}}" data-id="{{item.user_id}}" bindchange="onUserRoleChange">
-          <view class="mini-picker">{{item.role_name}}</view>
-        </picker>
+        <view class="role-actions">
+          <picker mode="selector" range="{{roleNames}}" data-id="{{item.user_id}}" bindchange="onUserRoleChange">
+            <view class="mini-picker">{{item.role_name}}</view>
+          </picker>
+          <view class="delete-user-button" data-id="{{item.user_id}}" data-name="{{item.name}}" bindtap="onDeleteUser">删除</view>
+        </view>
       </view>
     </view>
   </view>

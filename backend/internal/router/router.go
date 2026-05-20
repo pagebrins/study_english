@@ -148,6 +148,7 @@ func Build(
 	permissionGroup.GET("/permissions", permissionHandler.Snapshot)
 	permissionGroup.GET("/users/roles", permissionHandler.ListUserRoles)
 	permissionGroup.PUT("/users/:id/role", permissionHandler.UpdateUserRole)
+	permissionGroup.DELETE("/users/:id", permissionHandler.DeleteUser)
 	permissionGroup.PUT("/roles/:id/permissions", permissionHandler.UpdateRolePermissions)
 
 	practiceGroup := protected.Group("")

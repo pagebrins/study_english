@@ -465,6 +465,33 @@ Page<SettingsData>({
       this.setData({ error: error instanceof Error ? error.message : '更新用户角色失败' })
     }
   },
+  onDeleteUser(event: WechatMiniprogram.CustomEvent) {
+    const userID = Number(event.currentTarget.dataset.id)
+    const userName = String(event.currentTarget.dataset.name ?? '')
+    if (!userID || !this.data.canManagePermission) return
+    wx.showModal({
+      title: '确定删除',
+      content: `删除 ${userName || '该用户'} 后，将清空该用户的所有信息，且无法恢复。是否继续？`,
+      confirmColor: '#dc2626',
+      success: async (result) => {
+        if (!result.confirm) return
+        try {
+          await permissionService.deleteUser(userID)
+          const currentUserID = getStorageUser()?.id ?? 0
+          if (currentUserID === userID) {
+            clearSession()
+            wx.showToast({ title: '当前账号已删除', icon: 'none' })
+            wx.reLaunch({ url: '/pages/login/index' })
+            return
+          }
+          await this.loadSettings()
+          wx.showToast({ title: '用户已删除', icon: 'success' })
+        } catch (error) {
+          this.setData({ error: error instanceof Error ? error.message : '删除用户失败' })
+        }
+      },
+    })
+  },
   onLogout() {
     clearSession()
     wx.reLaunch({ url: '/pages/login/index' })
