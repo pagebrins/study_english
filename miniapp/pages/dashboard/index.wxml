@@ -7,10 +7,10 @@
       </view>
       <text class="hero-title">{{userName}}，今天先把最值得做的练起来</text>
       <text class="hero-copy">
-        {{!canView ? '当前账号还没有总览权限。' : bundle.goal_required ? '先完成初始水平测试，系统再根据结果安排今天的训练。' : bundle.assessment_required ? '先把这轮水平测试做完，这里会自动切换成你的今日学习看板。' : selectedModeName ? ('当前已锁定任务：' + selectedModeName) : '今天的计划已经展开，先挑一项开始。'}}
+        {{!canView ? '当前账号还没有总览权限。' : bundle.goal_required ? '先设置学习目标，然后按 5 个步骤完成入学流程。' : bundle.assessment_required ? '先完成单词和句子水平测试，系统再生成用户画像。' : bundle.plan_generation_required ? '用户画像已经准备好了，下一步去学习页生成学习计划。' : selectedModeName ? ('当前已锁定任务：' + selectedModeName) : '今天的计划已经展开，先挑一项开始。'}}
       </text>
 
-      <view class="hero-stats">
+      <view wx:if="{{!bundle.goal_required}}" class="hero-stats">
         <view class="stat-panel emphasis">
           <text class="stat-value">{{todayAnswered}}</text>
           <text class="stat-label">今日已答</text>
@@ -26,8 +26,10 @@
       </view>
 
       <view class="hero-actions">
-        <button wx:if="{{!bundle.goal_required && !bundle.assessment_required}}" class="primary-button action-button" bindtap="goPractice">开始今天练习</button>
-        <button wx:else class="primary-button action-button" bindtap="goStudy">去做水平测试</button>
+        <button wx:if="{{bundle.goal_required}}" class="primary-button action-button" bindtap="goStudy">去设置学习目标</button>
+        <button wx:elif="{{bundle.assessment_required}}" class="primary-button action-button" bindtap="goStudy">继续入学流程</button>
+        <button wx:elif="{{bundle.plan_generation_required}}" class="primary-button action-button" bindtap="goStudy">去生成学习计划</button>
+        <button wx:else class="primary-button action-button" bindtap="goPractice">开始今天练习</button>
         <button class="secondary-button action-button soft-button" bindtap="goStudy">进入学习页</button>
       </view>
     </view>
@@ -41,7 +43,7 @@
     <text class="muted">正在整理今天的训练总览...</text>
   </view>
 
-  <view wx:if="{{!loading && canView}}" class="focus-grid section-spacing">
+  <view wx:if="{{!loading && canView && !bundle.goal_required && !bundle.plan_generation_required}}" class="focus-grid section-spacing">
     <view class="section-card focus-card spotlight-card">
       <view class="section-head compact-head">
         <view>
@@ -57,9 +59,9 @@
         <button class="{{selectedType === 3 ? 'type-chip active' : 'type-chip'}}" data-value="3" bindtap="onTypeChange">文章</button>
       </view>
 
-      <view wx:if="{{bundle.goal_required || bundle.assessment_required}}" class="focus-empty warm-surface">
+      <view wx:if="{{bundle.assessment_required}}" class="focus-empty warm-surface">
         <text class="focus-title">先完成水平测试</text>
-        <text class="focus-copy">先完成初始水平测试，系统会根据结果自动替你挑出今天的重点任务。</text>
+        <text class="focus-copy">先完成这轮水平测试，系统会根据结果自动替你挑出今天的重点任务。</text>
         <button class="primary-button submit-button" bindtap="goStudy">去学习页测试</button>
       </view>
 
@@ -87,7 +89,7 @@
       />
     </view>
 
-    <view class="section-card feed-card">
+    <view wx:if="{{!bundle.assessment_required}}" class="section-card feed-card">
       <view class="section-head compact-head">
         <view>
           <text class="section-title">最近轨迹</text>
@@ -116,7 +118,7 @@
     </view>
   </view>
 
-  <view wx:if="{{!loading && canView && visibleItems.length > 0 && !bundle.goal_required && !bundle.assessment_required}}" class="section-card section-spacing">
+  <view wx:if="{{!loading && canView && visibleItems.length > 0 && !bundle.goal_required && !bundle.assessment_required && !bundle.plan_generation_required}}" class="section-card section-spacing">
     <view class="section-head compact-head">
       <view>
         <text class="section-title">备选任务</text>
@@ -133,7 +135,7 @@
     </scroll-view>
   </view>
 
-  <view wx:if="{{!loading && canView}}" class="dashboard-quick section-spacing">
+  <view wx:if="{{!loading && canView && !bundle.goal_required && !bundle.assessment_required && !bundle.plan_generation_required}}" class="dashboard-quick section-spacing">
     <button class="quick-card quick-primary" bindtap="goPractice">
       <text class="quick-title">练习入口</text>
       <text class="quick-copy">{{canPractice ? '带着当前任务直接开练' : '当前账号没有练习权限'}}</text>

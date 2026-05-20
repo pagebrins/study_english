@@ -1,10 +1,4 @@
 <view class="page settings-page page-with-bottom-space">
-  <view class="hero-card settings-hero warm-card aurora-card">
-    <text class="eyebrow">Settings Center</text>
-    <text class="section-title">把小程序调成你的顺手工作台</text>
-    <text class="section-subtitle">设置页按 Web 权限规则开放，交互改成更接近 tab 上方弹出菜单的样式。</text>
-  </view>
-
   <view wx:if="{{error}}" class="section-card content-card section-spacing">
     <text class="error-text">{{error}}</text>
   </view>
@@ -14,18 +8,14 @@
   </view>
 
   <view wx:if="{{!loading && activePanel === 'profile'}}" class="section-card content-card section-spacing">
-    <text class="section-title">Profile</text>
-    <text class="section-subtitle">账号信息和当前权限概览。</text>
+    <text class="section-title">个人中心</text>
     <view class="profile-card">
-      <text class="profile-name">{{userName}}</text>
-      <text class="profile-meta">{{userEmail || '暂无邮箱'}}</text>
-      <text class="profile-meta">角色：{{userRoleName}} / {{userRoleCode}}</text>
-    </view>
-    <view class="permission-pills">
-      <view wx:for="{{visiblePermissionCodes}}" wx:key="*this" class="permission-pill">
-        <text class="permission-pill-text">{{item === 'dashboard.view' ? '总览' : item === 'study.view' ? '学习' : item === 'history.view' ? '历史' : item === 'practice.use' ? '练习' : item === 'chat.use' ? 'AI 讲解' : item === 'settings.theme.manage' ? '主题管理' : item === 'settings.knowledge.manage' ? '知识库管理' : item === 'settings.permission.manage' ? '权限管理' : item}}</text>
+      <view wx:for="{{profileRows}}" wx:key="label" class="permission-row">
+        <view class="permission-copy">
+          <text class="permission-name">{{item.label}}</text>
+          <text class="permission-code">{{item.value}}</text>
+        </view>
       </view>
-      <text wx:if="{{visiblePermissionCodes.length === 0}}" class="muted">当前没有可展示的业务权限。</text>
     </view>
   </view>
 
@@ -132,14 +122,4 @@
     <text class="error-text">当前账号没有这个设置项的操作权限。</text>
   </view>
 
-  <view wx:if="{{showSheet}}" class="menu-popover-wrap">
-    <view class="menu-popover">
-      <button wx:if="{{canManagePermission}}" class="{{activePanel === 'permission' ? 'popover-item active' : 'popover-item'}}" data-panel="permission" bindtap="switchPanel">权限</button>
-      <button wx:if="{{canManageKnowledge}}" class="{{activePanel === 'word' ? 'popover-item active' : 'popover-item'}}" data-panel="word" bindtap="switchPanel">知识库</button>
-      <button wx:if="{{canManageTheme}}" class="{{activePanel === 'theme' ? 'popover-item active' : 'popover-item'}}" data-panel="theme" bindtap="switchPanel">主题</button>
-      <button class="{{activePanel === 'profile' ? 'popover-item active' : 'popover-item'}}" data-panel="profile" bindtap="switchPanel">个人中心</button>
-      <button class="popover-item danger" bindtap="onLogout">退出</button>
-    </view>
-    <view class="popover-arrow"></view>
-  </view>
 </view>

@@ -20,6 +20,7 @@
     "selectedColor": "#0f766e",
     "backgroundColor": "#ffffff",
     "borderStyle": "black",
+    "custom": true,
     "list": [
       {
         "pagePath": "pages/dashboard/index",

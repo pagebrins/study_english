@@ -33,6 +33,7 @@ const emptyBundle: LearningPlanBundle = {
   items: [],
   goal_required: false,
   assessment_required: false,
+  plan_generation_required: false,
 }
 
 Page<DashboardData>({
@@ -57,6 +58,8 @@ Page<DashboardData>({
   },
   onShow() {
     if (!requireLogin()) return
+    const tabBar = this.getTabBar?.() as WechatMiniprogram.Component.TrivialInstance | undefined
+    tabBar?.setData?.({ selected: 0, showSettingsMenu: false })
     const user = getStorageUser()
     const canView = hasPermission(user, 'dashboard.view')
     const canPractice = hasPermission(user, 'practice.use')

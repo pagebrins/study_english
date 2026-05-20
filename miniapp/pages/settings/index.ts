@@ -8,10 +8,15 @@ import type { Permission, Role, UserRoleView } from '../../types/permission'
 import type { Theme } from '../../types/theme'
 import type { Word } from '../../types/word'
 
-type SettingsPanel = 'profile' | 'theme' | 'word' | 'permission'
+type SettingsPanel = 'none' | 'profile' | 'theme' | 'word' | 'permission'
 
 type PermissionOption = Permission & {
   checked: boolean
+}
+
+type ProfileRow = {
+  label: string
+  value: string
 }
 
 type SettingsData = {
@@ -25,6 +30,7 @@ type SettingsData = {
   userRoleCode: string
   permissionCodes: string[]
   visiblePermissionCodes: string[]
+  profileRows: ProfileRow[]
   canManageTheme: boolean
   canManageKnowledge: boolean
   canManagePermission: boolean
@@ -80,18 +86,30 @@ const permissionLabels: Record<string, string> = {
 const normalizeProfilePermissions = (codes: string[]) =>
   visiblePermissionOrder.filter((code) => codes.includes(code))
 
+const buildProfileRows = (user: ReturnType<typeof getStorageUser>, codes: string[]): ProfileRow[] => {
+  const visibleCodes = normalizeProfilePermissions(codes)
+  return [
+    { label: '昵称', value: user?.name || '-' },
+    { label: '邮箱', value: user?.email || '-' },
+    { label: '角色名称', value: user?.role_name || '-' },
+    { label: '角色编码', value: user?.role_code || '-' },
+    { label: '权限', value: visibleCodes.length ? visibleCodes.map((code) => permissionLabels[code] ?? code).join('、') : '-' },
+  ]
+}
+
 Page<SettingsData>({
   data: {
     loading: false,
     error: '',
     showSheet: false,
-    activePanel: 'profile',
+    activePanel: 'none',
     userName: getStorageUser()?.name ?? '同学',
     userEmail: getStorageUser()?.email ?? '',
     userRoleName: getStorageUser()?.role_name ?? 'Learner',
     userRoleCode: getStorageUser()?.role_code ?? 'learner',
     permissionCodes: getStorageUser()?.permissions ?? [],
     visiblePermissionCodes: normalizeProfilePermissions(getStorageUser()?.permissions ?? []),
+    profileRows: buildProfileRows(getStorageUser(), getStorageUser()?.permissions ?? []),
     canManageTheme: false,
     canManageKnowledge: false,
     canManagePermission: false,
@@ -123,6 +141,8 @@ Page<SettingsData>({
   },
   onShow() {
     if (!requireLogin()) return
+    const tabBar = this.getTabBar?.() as WechatMiniprogram.Component.TrivialInstance | undefined
+    tabBar?.setData?.({ selected: 3, showSettingsMenu: false })
     const user = getStorageUser()
     const permissionCodes = user?.permissions ?? []
     const canManageTheme = hasPermission(user, 'settings.theme.manage')
@@ -133,7 +153,7 @@ Page<SettingsData>({
       'settings.knowledge.manage',
       'settings.permission.manage',
     ])
-    const activePanel: SettingsPanel = 'profile'
+    const activePanel = (getApp<IAppOption>().globalData.settingsPanel || 'none') as SettingsPanel
 
     this.setData({
       userName: user?.name ?? '同学',
@@ -142,6 +162,7 @@ Page<SettingsData>({
       userRoleCode: user?.role_code ?? 'learner',
       permissionCodes,
       visiblePermissionCodes: normalizeProfilePermissions(permissionCodes),
+      profileRows: buildProfileRows(user, permissionCodes),
       canManageTheme,
       canManageKnowledge,
       canManagePermission,
@@ -265,7 +286,7 @@ Page<SettingsData>({
       themeLevel: theme.level,
       themeParentID: theme.parent_id ?? 0,
       themeSortOrder: String(theme.sort_order ?? 0),
-      showSheet: true,
+      showSheet: false,
     })
     this.refreshThemeParentOptions()
   },
@@ -334,7 +355,7 @@ Page<SettingsData>({
       wordL2Category: word.l2_category,
       wordExample: word.example,
       wordTagsText: word.tags.map((item) => item.category_name).join(', '),
-      showSheet: true,
+      showSheet: false,
     })
   },
   resetWordForm() {

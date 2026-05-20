@@ -6,9 +6,31 @@
       现在的小程序已经覆盖总览、学习计划、练习答题、历史复盘、AI 讲解和设置中心。
     </text>
 
-    <button class="primary-button" loading="{{loading}}" bindtap="onWechatLogin">
+    <button wx:if="{{!showNamePrompt}}" class="primary-button login-button" loading="{{loading}}" bindtap="onWechatLogin">
       {{loading ? '登录中...' : '微信一键登录'}}
     </button>
+
+    <view wx:if="{{showNamePrompt}}" class="name-prompt-card">
+      <view class="name-prompt-head">
+        <text class="name-prompt-badge">First Login</text>
+        <text class="name-prompt-title">先设置一个显示昵称</text>
+        <text class="name-prompt-copy">首次登录可以先填写昵称，或者直接申请获取微信昵称。老用户也可以直接跳过继续登录。</text>
+      </view>
+
+      <view class="name-helper-row">
+        <text class="name-helper-label">登录后显示为</text>
+        <text class="name-helper-value">{{nickname || '未设置'}}</text>
+      </view>
+
+      <input class="field-input field-spacing" placeholder="请输入你的昵称" value="{{nickname}}" bindinput="onNicknameInput" />
+
+      <button class="secondary-button prompt-button soft-button" bindtap="onUseWechatNickname">获取微信昵称</button>
+      <button class="primary-button prompt-button" loading="{{loading}}" bindtap="onConfirmNickname">
+        {{loading ? '登录中...' : '确认昵称并登录'}}
+      </button>
+      <button class="ghost-button prompt-button" loading="{{loading}}" bindtap="onDirectWechatLogin">已有账号，直接登录</button>
+      <button class="text-button" bindtap="onCloseNamePrompt">暂时收起</button>
+    </view>
 
     <text wx:if="{{error}}" class="error-text">{{error}}</text>
   </view>

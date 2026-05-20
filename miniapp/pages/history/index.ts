@@ -49,6 +49,8 @@ Page<HistoryData>({
   },
   onShow() {
     if (!requireLogin()) return
+    const tabBar = this.getTabBar?.() as WechatMiniprogram.Component.TrivialInstance | undefined
+    tabBar?.setData?.({ selected: 2, showSettingsMenu: false })
     const user = getStorageUser()
     const canView = hasPermission(user, 'history.view')
     const canPractice = hasPermission(user, 'practice.use')
@@ -60,26 +62,7 @@ Page<HistoryData>({
       error: canView ? '' : '当前账号没有历史页访问权限。',
     })
     if (!canView) return
-    void this.ensureLearningReady()
-  },
-  async ensureLearningReady() {
-    try {
-      const learningStatus = await learningPlanService.current()
-      if (learningStatus.goal_required || learningStatus.assessment_required) {
-        wx.showModal({
-          title: '先完成学习设置',
-          content: '你还没有完成学习目标或水平测试，系统将带你去设置页继续。',
-          showCancel: false,
-          success: () => wx.switchTab({ url: '/pages/study/index' }),
-        })
-        return
-      }
-      await this.bootstrap()
-    } catch (error) {
-      this.setData({
-        error: error instanceof Error ? error.message : '加载学习状态失败',
-      })
-    }
+    void this.bootstrap()
   },
   async bootstrap() {
     this.setData({ loading: true, error: '' })

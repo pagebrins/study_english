@@ -178,7 +178,7 @@ func (s *AuthService) ResetPassword(requestID, email, newPassword string) error 
 	return nil
 }
 
-func (s *AuthService) WechatMiniLogin(requestID, code string) (string, *AuthUserProfile, error) {
+func (s *AuthService) WechatMiniLogin(requestID, code, name string) (string, *AuthUserProfile, error) {
 	if strings.TrimSpace(s.wechatMiniAppID) == "" || strings.TrimSpace(s.wechatMiniAppSecret) == "" {
 		return "", nil, errors.New("wechat miniapp login is not configured")
 	}
@@ -196,7 +196,10 @@ func (s *AuthService) WechatMiniLogin(requestID, code string) (string, *AuthUser
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", nil, err
 		}
-		user, err = s.createWeChatUser(requestID, session.OpenID, email)
+		if strings.TrimSpace(name) == "" {
+			return "", nil, errors.New("first wechat login requires name")
+		}
+		user, err = s.createWeChatUser(requestID, session.OpenID, email, name)
 		if err != nil {
 			return "", nil, err
 		}
@@ -405,7 +408,7 @@ func (s *AuthService) fetchWeChatWebUserInfo(accessToken, openID string) (*wecha
 	return &userInfo, nil
 }
 
-func (s *AuthService) createWeChatUser(requestID, openID, email string) (*model.User, error) {
+func (s *AuthService) createWeChatUser(requestID, openID, email, displayName string) (*model.User, error) {
 	passwordSeed, err := randomHex(16)
 	if err != nil {
 		return nil, err
@@ -418,9 +421,13 @@ func (s *AuthService) createWeChatUser(requestID, openID, email string) (*model.
 	if len(suffix) > 6 {
 		suffix = suffix[len(suffix)-6:]
 	}
+	name := strings.TrimSpace(displayName)
+	if name == "" {
+		name = fmt.Sprintf("微信用户%s", suffix)
+	}
 	user := &model.User{
 		Email:        email,
-		Name:         fmt.Sprintf("微信用户%s", suffix),
+		Name:         name,
 		PasswordHash: string(hash),
 	}
 	if err := s.repo.CreateUser(requestID, user); err != nil {

@@ -5,6 +5,7 @@ declare interface IAppOption {
     user: import('../types/auth').AuthUser | null
     selectedMode: import('../types/mode').StudyMode | null
     explainContext: import('../types/question').ExplainChatPageContext | null
+    settingsPanel?: 'none' | 'profile' | 'theme' | 'word' | 'permission'
   }
   isAuthed: () => boolean
 }

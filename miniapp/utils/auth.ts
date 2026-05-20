@@ -1,7 +1,7 @@
 import { setStorageToken, setStorageUser } from './session'
 import { authService } from '../services/auth'
 
-export const ensureWechatLogin = async () => {
+export const ensureWechatLogin = async (name?: string) => {
   const loginResult = await new Promise<WechatMiniprogram.LoginSuccessCallbackResult>((resolve, reject) => {
     wx.login({
       success: resolve,
@@ -11,7 +11,7 @@ export const ensureWechatLogin = async () => {
   if (!loginResult.code) {
     throw new Error('未获取到微信登录凭证')
   }
-  const result = await authService.wechatLogin(loginResult.code)
+  const result = await authService.wechatLogin(loginResult.code, name)
   setStorageToken(result.token)
   setStorageUser(result.user)
   return result

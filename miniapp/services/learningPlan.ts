@@ -12,6 +12,11 @@ export const learningPlanService = {
       method: 'POST',
       data: payload,
     }),
+  generate: () =>
+    request<LearningPlanBundle>({
+      url: '/learning-plans/generate',
+      method: 'POST',
+    }),
   submitAssessment: (payload: SubmitLearningAssessmentPayload) =>
     request<LearningPlanBundle>({
       url: '/learning-assessments/submit',

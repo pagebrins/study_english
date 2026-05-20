@@ -23,45 +23,95 @@
   </view>
 
   <view wx:if="{{!loading && bundle.goal_required}}" class="section-card planner-card onboarding-card">
-    <text class="section-title">先完成初始水平测试</text>
-    <text class="section-subtitle">第一次进入先做一轮测评，系统会根据结果生成你的学习日历和今日计划。</text>
-    <input class="field-input field-spacing" placeholder="可选：先写一个大致目标，不填也能开始" value="{{goal}}" bindinput="onGoalInput" />
+    <text class="section-title">Step 1 · 设置学习目标</text>
+    <text class="section-subtitle">先把目标、每日时长和学习时间段定下来，接着进入水平测试。</text>
+    <input class="field-input field-spacing" placeholder="例如：三个月内提升职场英语表达" value="{{goal}}" bindinput="onGoalInput" />
+    <input class="field-input field-spacing" type="number" placeholder="每天学习多少分钟" value="{{dailyMinutes}}" bindinput="onDailyMinutesInput" />
+    <input class="field-input field-spacing" placeholder="例如：工作日 20:00-21:00" value="{{studyTimeRange}}" bindinput="onStudyTimeRangeInput" />
     <button class="primary-button submit-button" loading="{{startingAssessment}}" bindtap="startInitialAssessment">
-      {{startingAssessment ? '进入测试中...' : '开始水平测试'}}
+      {{startingAssessment ? '保存中...' : '保存目标并下一步'}}
     </button>
   </view>
 
-  <view wx:if="{{!loading && !bundle.goal_required && bundle.assessment_required && bundle.assessment}}" class="section-card planner-card">
-    <text class="section-title">{{bundle.assessment.assessment_type === 'upgrade' ? '提高难度测试' : bundle.assessment.assessment_type === 'downgrade' ? '降低难度测试' : '初始水平测试'}}</text>
-    <text class="section-subtitle">先完成这轮测试，下面的学习日历和任务就会自动展开。</text>
-
-    <view wx:for="{{bundle.assessment_items}}" wx:key="id" class="assessment-card">
-      <text class="assessment-question">{{index + 1}}. {{item.question}}</text>
-      <button
-        wx:if="{{item.question_pronunciation && item.question_pronunciation.audio_url}}"
-        class="secondary-button pronunciation-button"
-        data-url="{{item.question_pronunciation.audio_url}}"
-        bindtap="playPronunciation"
-      >
-        播放英文题干
-      </button>
-      <textarea
-        class="field-textarea"
-        placeholder="请输入你的答案"
-        value="{{assessmentAnswers[index]}}"
-        data-index="{{index}}"
-        bindinput="onAssessmentAnswerInput"
-      />
+  <view wx:if="{{!loading && !bundle.goal_required && bundle.assessment_required && onboardingStep === 2}}" class="section-card planner-card">
+    <text class="section-title">Step 2 · 单词测试</text>
+    <text class="section-subtitle">当前目标：{{bundle.profile ? bundle.profile.goal : goal}}。先完成单词测试，再进入句子测试。</text>
+    <view wx:for="{{bundle.assessment_items}}" wx:key="id">
+      <view wx:if="{{item.study_type === 1}}" class="assessment-card">
+        <text class="assessment-question">{{index + 1}}. {{item.question}}</text>
+        <button
+          wx:if="{{item.question_pronunciation && item.question_pronunciation.audio_url}}"
+          class="secondary-button pronunciation-button"
+          data-url="{{item.question_pronunciation.audio_url}}"
+          bindtap="playPronunciation"
+        >
+          播放英文题干
+        </button>
+        <textarea
+          class="field-textarea"
+          placeholder="请输入你的答案"
+          value="{{assessmentAnswers[index]}}"
+          data-index="{{index}}"
+          bindinput="onAssessmentAnswerInput"
+        />
+      </view>
     </view>
-
-    <button class="primary-button submit-button" loading="{{submittingAssessment}}" bindtap="submitAssessment">
-      {{submittingAssessment ? '提交测试中...' : '提交测试并生成学习日历'}}
-    </button>
+    <button class="primary-button submit-button" bindtap="goSentenceStep">下一步：句子测试</button>
   </view>
 
-  <view wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && bundle.profile}}" class="section-card planner-card calendar-card">
-    <text class="section-title">本周学习日历</text>
-    <text class="section-subtitle">先看这周的学习落点，再决定今天从哪条任务开始。</text>
+  <view wx:if="{{!loading && !bundle.goal_required && bundle.assessment_required && onboardingStep === 3}}" class="section-card planner-card">
+    <text class="section-title">Step 3 · 句子测试</text>
+    <text class="section-subtitle">完成句子测试后，系统会生成用户画像并进入学习计划确认。</text>
+    <view wx:for="{{bundle.assessment_items}}" wx:key="id">
+      <view wx:if="{{item.study_type === 2}}" class="assessment-card">
+        <text class="assessment-question">{{index + 1}}. {{item.question}}</text>
+        <button
+          wx:if="{{item.question_pronunciation && item.question_pronunciation.audio_url}}"
+          class="secondary-button pronunciation-button"
+          data-url="{{item.question_pronunciation.audio_url}}"
+          bindtap="playPronunciation"
+        >
+          播放英文题干
+        </button>
+        <textarea
+          class="field-textarea"
+          placeholder="请输入你的答案"
+          value="{{assessmentAnswers[index]}}"
+          data-index="{{index}}"
+          bindinput="onAssessmentAnswerInput"
+        />
+      </view>
+    </view>
+    <view class="hero-actions field-spacing">
+      <button class="ghost-button action-button" bindtap="backToWordStep">上一步</button>
+      <button class="primary-button action-button" loading="{{submittingAssessment}}" bindtap="submitAssessment">
+        {{submittingAssessment ? '提交测试中...' : '提交测试'}}
+      </button>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && bundle.plan_generation_required && bundle.profile}}" class="section-card planner-card">
+    <text class="section-title">Step 4 · 确认用户画像</text>
+    <text class="section-subtitle">水平测试已完成。先确认用户画像，再生成学习计划。</text>
+    <view class="profile-metrics">
+      <text class="meta-text">学习目标 {{bundle.profile.goal}}</text>
+      <text class="meta-text">每天 {{bundle.profile.daily_minutes}} 分钟</text>
+      <text class="meta-text">时间段 {{bundle.profile.study_time_range || '待设置'}}</text>
+      <text class="meta-text">单词 Lv{{bundle.profile.word_level}}</text>
+      <text class="meta-text">句子 Lv{{bundle.profile.sentence_level}}</text>
+      <text class="meta-text">综合 Lv{{bundle.profile.overall_level}}</text>
+    </view>
+    <view class="hero-actions field-spacing">
+      <button class="secondary-button action-button soft-button" loading="{{savingGoal}}" bindtap="saveGoal">更新目标并重新测评</button>
+      <button class="primary-button action-button" loading="{{generatingPlan}}" bindtap="generatePlan">
+        {{generatingPlan ? '生成中...' : '生成学习计划'}}
+      </button>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && !bundle.plan_generation_required && bundle.profile}}" class="section-card planner-card calendar-card">
+    <text class="section-title">Step 5 · 学习计划</text>
+    <text class="section-subtitle">学习计划已生成，先看本周日历，再挑今天的任务开始。</text>
     <view class="calendar-row">
       <view wx:for="{{calendarDays}}" wx:key="key" class="{{item.isPlanDay ? 'calendar-cell active' : item.isToday ? 'calendar-cell today' : 'calendar-cell'}}">
         <text class="calendar-week">{{item.label}}</text>
@@ -74,17 +124,21 @@
     </view>
   </view>
 
-  <view wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && bundle.profile}}" class="section-card planner-card">
+  <view wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && !bundle.plan_generation_required && bundle.profile}}" class="section-card planner-card">
     <text class="section-title">当前学习画像</text>
-    <text class="section-subtitle">{{bundle.plan ? bundle.plan.goal_summary : '水平测试完成后，接下来可以继续挑选今天的任务。'}}</text>
+    <text class="section-subtitle">{{bundle.plan ? bundle.plan.goal_summary : ('目标：' + bundle.profile.goal)}}</text>
     <view class="profile-metrics">
+      <text class="meta-text">每天 {{bundle.profile.daily_minutes}} 分钟</text>
+      <text class="meta-text">{{bundle.profile.study_time_range || '时间段待设置'}}</text>
       <text class="meta-text">单词 Lv{{bundle.profile.word_level}}</text>
       <text class="meta-text">句子 Lv{{bundle.profile.sentence_level}}</text>
       <text class="meta-text">综合 Lv{{bundle.profile.overall_level}}</text>
     </view>
     <text class="field-label">更新学习目标</text>
-    <input class="field-input" placeholder="修改后会重新测评" value="{{goal}}" bindinput="onGoalInput" />
-    <button class="secondary-button submit-button" loading="{{savingGoal}}" bindtap="saveGoal">更新目标并重新测评</button>
+    <input class="field-input field-spacing" placeholder="修改后会重新测评" value="{{goal}}" bindinput="onGoalInput" />
+    <input class="field-input field-spacing" type="number" placeholder="每天学习多少分钟" value="{{dailyMinutes}}" bindinput="onDailyMinutesInput" />
+    <input class="field-input" placeholder="例如：工作日 20:00-21:00" value="{{studyTimeRange}}" bindinput="onStudyTimeRangeInput" />
+    <button class="secondary-button submit-button field-spacing" loading="{{savingGoal}}" bindtap="saveGoal">更新目标并重新测评</button>
   </view>
 
   <empty-state

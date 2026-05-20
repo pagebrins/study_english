@@ -13,7 +13,7 @@ page {
 }
 
 .page-with-bottom-space {
-  padding-bottom: 48rpx;
+  padding-bottom: 180rpx;
 }
 
 .hero-card,

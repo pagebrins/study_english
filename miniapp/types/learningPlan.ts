@@ -5,6 +5,7 @@ export type LearningProfile = {
   user_id: number
   goal: string
   daily_minutes: number
+  study_time_range: string
   translation_mode: number
   focuses: string[]
   notes: string
@@ -96,10 +97,13 @@ export type LearningPlanBundle = {
   items: LearningPlanItem[]
   goal_required: boolean
   assessment_required: boolean
+  plan_generation_required: boolean
 }
 
 export type SetLearningGoalPayload = {
   goal: string
+  daily_minutes?: number
+  study_time_range?: string
 }
 
 export type SubmitLearningAssessmentPayload = {

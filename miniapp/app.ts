@@ -7,12 +7,14 @@ App<IAppOption>({
     user: getStorageUser(),
     selectedMode: getSelectedMode(),
     explainContext: getExplainContext(),
+    settingsPanel: 'none',
   },
   onLaunch() {
     this.globalData.token = getStorageToken()
     this.globalData.user = getStorageUser()
     this.globalData.selectedMode = getSelectedMode()
     this.globalData.explainContext = getExplainContext()
+    this.globalData.settingsPanel = 'none'
   },
   isAuthed() {
     return isLoggedIn()
