@@ -2,11 +2,16 @@ import { Volume2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Button } from './ui/button'
 import type { Pronunciation } from '../types/pronunciation'
+import { http } from '../services/http'
 
 const resolveAudioURL = (audioURL: string) => {
   if (/^https?:\/\//i.test(audioURL)) return audioURL
-  const baseURL = String(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1').replace(/\/$/, '')
-  return `${baseURL}${audioURL.startsWith('/') ? audioURL : `/${audioURL}`}`
+  const baseURL = String(http.defaults.baseURL ?? import.meta.env.VITE_API_BASE_URL ?? window.location.origin)
+  const resolvedBase = /^https?:\/\//i.test(baseURL) ? new URL(baseURL) : new URL(baseURL, window.location.origin)
+  if (audioURL.startsWith('/')) {
+    return new URL(audioURL, resolvedBase.origin).toString()
+  }
+  return new URL(audioURL, `${resolvedBase.toString().replace(/\/$/, '')}/`).toString()
 }
 
 type PronunciationButtonProps = {

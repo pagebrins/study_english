@@ -26,6 +26,7 @@ type DashboardData = {
   canPractice: boolean
   canChat: boolean
   canSettings: boolean
+  onboardingIncomplete: boolean
 }
 
 const emptyBundle: LearningPlanBundle = {
@@ -55,6 +56,7 @@ Page<DashboardData>({
     canPractice: false,
     canChat: false,
     canSettings: false,
+    onboardingIncomplete: false,
   },
   onShow() {
     if (!requireLogin()) return
@@ -97,6 +99,7 @@ Page<DashboardData>({
       const plannedMinutes = visibleItems.reduce((sum, item) => sum + (item.estimated_minutes || 0), 0)
       this.setData({
         bundle,
+        onboardingIncomplete: bundle.goal_required || bundle.assessment_required || bundle.plan_generation_required,
         visibleItems,
         featuredItem,
         recentItems: recentItems.slice(0, 4),
@@ -144,6 +147,10 @@ Page<DashboardData>({
     this.setData({ selectedModeName: mode.name })
     wx.showToast({ title: '已切换任务', icon: 'success' })
     return true
+  },
+  startOnboarding() {
+    getApp<IAppOption>().globalData.openOnboardingModal = true
+    wx.switchTab({ url: '/pages/study/index' })
   },
   goStudy() {
     wx.switchTab({ url: '/pages/study/index' })

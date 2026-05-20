@@ -6,6 +6,7 @@ declare interface IAppOption {
     selectedMode: import('../types/mode').StudyMode | null
     explainContext: import('../types/question').ExplainChatPageContext | null
     settingsPanel?: 'none' | 'profile' | 'theme' | 'word' | 'permission'
+    openOnboardingModal?: boolean
   }
   isAuthed: () => boolean
 }

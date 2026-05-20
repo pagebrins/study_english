@@ -282,3 +282,16 @@
 .muted-card {
   background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
 }
+
+.onboarding-entry-card {
+  margin-top: 24rpx;
+  padding: 32rpx;
+  min-height: 280rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.onboarding-entry-button {
+  width: 100%;
+}

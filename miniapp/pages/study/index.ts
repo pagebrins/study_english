@@ -1,8 +1,10 @@
 import { learningPlanService } from '../../services/learningPlan'
+import { questionService } from '../../services/question'
 import { clearSession, getSelectedMode, getStorageUser, setSelectedMode } from '../../utils/session'
 import { requireLogin } from '../../utils/guard'
 import { miniappConfig } from '../../utils/config'
-import type { LearningPlanBundle } from '../../types/learningPlan'
+import type { LearningPlanBundle, LearningPlanItem } from '../../types/learningPlan'
+import type { GeneratedQuestion } from '../../types/question'
 import type { StudyMode } from '../../types/mode'
 
 let pronunciationPlayer: WechatMiniprogram.InnerAudioContext | null = null
@@ -21,32 +23,73 @@ type CalendarDay = {
 type ModePageData = {
   generatingPlan: boolean
   loading: boolean
+  generatingQuestions: boolean
   savingGoal: boolean
   submittingAssessment: boolean
   startingAssessment: boolean
   error: string
   bundle: LearningPlanBundle
   visibleItems: LearningPlanBundle['items']
+  selectedPlanItem: LearningPlanItem | null
   selectedType: number
   selectedModeID: number
   userName: string
+  generated: GeneratedQuestion[]
+  answers: string[]
+  issues: string[][]
+  submittingAnswerIndex: number
   goal: string
   dailyMinutes: number
   studyTimeRange: string
   onboardingStep: number
-  wordAssessmentItems: LearningPlanBundle['assessment_items']
-  sentenceAssessmentItems: LearningPlanBundle['assessment_items']
   assessmentAnswers: string[]
   calendarDays: CalendarDay[]
   suggestedGoal: string
+  showOnboardingModal: boolean
+  onboardingIncomplete: boolean
 }
 
 const fallbackGoal = '完成初始水平测试后制定学习目标'
+
+const formatDateKey = (date: Date) => {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const parsePlanDate = (value?: string) => {
+  if (!value) return null
+  const direct = new Date(value)
+  if (!Number.isNaN(direct.getTime())) return direct
+  const normalized = new Date(`${value}T00:00:00`)
+  if (!Number.isNaN(normalized.getTime())) return normalized
+  return null
+}
+
+const buildModeFromItem = (selected: LearningPlanItem): StudyMode | null => {
+  if (!selected.mode_id) return null
+  return {
+    id: selected.mode_id,
+    name: selected.name,
+    description: selected.description,
+    level: selected.level,
+    numbers: selected.numbers,
+    type: selected.study_type,
+    mode: selected.translation_mode,
+    source: 'plan_auto',
+    plan_item_id: selected.id,
+    theme_id: selected.theme_id,
+    theme_path: selected.theme_path,
+    requirements: selected.requirements,
+  }
+}
 
 Page<ModePageData>({
   data: {
     loading: false,
     generatingPlan: false,
+    generatingQuestions: false,
     savingGoal: false,
     submittingAssessment: false,
     startingAssessment: false,
@@ -59,36 +102,49 @@ Page<ModePageData>({
       plan_generation_required: false,
     },
     visibleItems: [],
+    selectedPlanItem: null,
     selectedType: 2,
     selectedModeID: getSelectedMode()?.id ?? 0,
     userName: getStorageUser()?.name ?? '同学',
+    generated: [],
+    answers: [],
+    issues: [],
+    submittingAnswerIndex: -1,
     goal: '',
     dailyMinutes: 20,
     studyTimeRange: '',
     onboardingStep: 1,
-    wordAssessmentItems: [],
-    sentenceAssessmentItems: [],
     assessmentAnswers: [],
     calendarDays: [],
     suggestedGoal: fallbackGoal,
+    showOnboardingModal: false,
+    onboardingIncomplete: false,
   },
-  onShow() {
+  async onShow() {
     if (!requireLogin()) return
     const tabBar = this.getTabBar?.() as WechatMiniprogram.Component.TrivialInstance | undefined
     tabBar?.setData?.({ selected: 1, showSettingsMenu: false })
-    void this.loadStatus()
+    await this.loadStatus()
+    if (getApp<IAppOption>().globalData.openOnboardingModal && this.data.onboardingIncomplete) {
+      this.setData({ showOnboardingModal: true })
+      getApp<IAppOption>().globalData.openOnboardingModal = false
+    } else if (!this.data.onboardingIncomplete && this.data.selectedPlanItem?.mode_id) {
+      void this.generateQuestionsForPlan(this.data.selectedPlanItem.mode_id)
+    }
   },
   buildCalendarDays(planDate?: string) {
-    const target = planDate ? new Date(`${planDate}T00:00:00`) : new Date()
+    const parsedPlanDate = parsePlanDate(planDate)
+    const target = parsedPlanDate ?? new Date()
     const today = new Date()
     const start = new Date(target)
+    const planKey = parsedPlanDate ? formatDateKey(parsedPlanDate) : ''
     const weekday = start.getDay() || 7
     start.setDate(start.getDate() - (weekday - 1))
     const labels = ['一', '二', '三', '四', '五', '六', '日']
     return labels.map((label, index) => {
       const current = new Date(start)
       current.setDate(start.getDate() + index)
-      const key = current.toISOString().slice(0, 10)
+      const key = formatDateKey(current)
       const month = current.getMonth() + 1
       const date = current.getDate()
       return {
@@ -99,36 +155,51 @@ Page<ModePageData>({
           current.getFullYear() === today.getFullYear() &&
           current.getMonth() === today.getMonth() &&
           current.getDate() === today.getDate(),
-        isPlanDay: Boolean(planDate) && key === planDate,
+        isPlanDay: Boolean(planKey) && key === planKey,
       }
     })
   },
   syncBundle(bundle: LearningPlanBundle, selectedModeID?: number) {
-    const shouldClearMode = bundle.goal_required || bundle.assessment_required || bundle.plan_generation_required
-    if (shouldClearMode) {
+    const onboardingIncomplete = bundle.goal_required || bundle.assessment_required || bundle.plan_generation_required
+    if (onboardingIncomplete) {
       setSelectedMode(null)
     }
-    const wordAssessmentItems = bundle.assessment_items.filter((item) => item.study_type === 1)
-    const sentenceAssessmentItems = bundle.assessment_items.filter((item) => item.study_type === 2)
+    const wordIncomplete = bundle.assessment_required && bundle.assessment_items
+      .filter((item) => item.study_type === 1)
+      .some((item) => !(item.user_answer ?? '').trim())
     const onboardingStep = bundle.goal_required
       ? 1
       : bundle.assessment_required
-        ? (wordAssessmentItems.some((item) => !(item.user_answer ?? '').trim()) ? 2 : 3)
+        ? (wordIncomplete ? 2 : 3)
         : bundle.plan_generation_required
           ? 4
           : 5
+
+    const visibleItems = bundle.items
+    const nextSelected = onboardingIncomplete
+      ? null
+      : visibleItems.find((item) => item.mode_id === (selectedModeID ?? this.data.selectedModeID)) ?? visibleItems[0] ?? null
+    const nextMode = nextSelected ? buildModeFromItem(nextSelected) : null
+    setSelectedMode(nextMode)
+
     this.setData({
       bundle,
-      visibleItems: bundle.items.filter((item) => item.study_type === this.data.selectedType),
-      selectedModeID: shouldClearMode ? 0 : (selectedModeID ?? this.data.selectedModeID),
+      onboardingIncomplete,
+      visibleItems,
+      selectedPlanItem: nextSelected,
+      selectedType: nextSelected?.study_type ?? this.data.selectedType,
+      selectedModeID: onboardingIncomplete ? 0 : (nextSelected?.mode_id ?? 0),
+      generated: onboardingIncomplete ? [] : this.data.generated,
+      answers: onboardingIncomplete ? [] : this.data.answers,
+      issues: onboardingIncomplete ? [] : this.data.issues,
+      submittingAnswerIndex: onboardingIncomplete ? -1 : this.data.submittingAnswerIndex,
       goal: bundle.profile?.goal && bundle.profile.goal !== fallbackGoal ? bundle.profile.goal : '',
       dailyMinutes: bundle.profile?.daily_minutes ?? this.data.dailyMinutes,
       studyTimeRange: bundle.profile?.study_time_range ?? this.data.studyTimeRange,
       assessmentAnswers: bundle.assessment_items.map((item) => item.user_answer ?? ''),
       calendarDays: this.buildCalendarDays(bundle.plan?.plan_date),
       onboardingStep,
-      wordAssessmentItems,
-      sentenceAssessmentItems,
+      showOnboardingModal: onboardingIncomplete ? this.data.showOnboardingModal : false,
     })
   },
   async loadStatus() {
@@ -144,6 +215,14 @@ Page<ModePageData>({
       this.setData({ loading: false })
     }
   },
+  openOnboardingModal() {
+    this.setData({ showOnboardingModal: true })
+  },
+  closeOnboardingModal() {
+    this.setData({ showOnboardingModal: false })
+    getApp<IAppOption>().globalData.openOnboardingModal = false
+  },
+  noop() {},
   onTypeChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const selectedType = Number(event.currentTarget.dataset.value)
     this.setData({
@@ -203,13 +282,7 @@ Page<ModePageData>({
     const index = Number(event.currentTarget.dataset.index)
     const next = [...this.data.assessmentAnswers]
     next[index] = event.detail.value
-    const wordAssessmentItems = this.data.bundle.assessment_items
-      .map((item, itemIndex) => ({ ...item, user_answer: next[itemIndex] ?? '' }))
-      .filter((item) => item.study_type === 1)
-    this.setData({
-      assessmentAnswers: next,
-      wordAssessmentItems,
-    })
+    this.setData({ assessmentAnswers: next })
   },
   goSentenceStep() {
     const wordIndexes = this.data.bundle.assessment_items
@@ -255,6 +328,11 @@ Page<ModePageData>({
       const bundle = await learningPlanService.generate()
       setSelectedMode(null)
       this.syncBundle(bundle, 0)
+      this.setData({ showOnboardingModal: false })
+      const firstPlan = bundle.items.find((item) => item.mode_id)
+      if (firstPlan?.mode_id) {
+        void this.generateQuestionsForPlan(firstPlan.mode_id)
+      }
       wx.showToast({ title: '学习计划已生成', icon: 'success' })
     } catch (error) {
       this.setData({
@@ -262,6 +340,71 @@ Page<ModePageData>({
       })
     } finally {
       this.setData({ generatingPlan: false })
+    }
+  },
+  async generateQuestionsForPlan(modeID: number) {
+    if (!modeID || this.data.generatingQuestions) return
+    this.setData({
+      generatingQuestions: true,
+      error: '',
+      generated: [],
+      answers: [],
+      issues: [],
+      submittingAnswerIndex: -1,
+    })
+    try {
+      const generated = await questionService.generate(modeID)
+      this.setData({
+        generated,
+        answers: generated.map(() => ''),
+        issues: generated.map(() => []),
+      })
+    } catch (error) {
+      this.setData({
+        error: error instanceof Error ? error.message : '生成题目失败',
+      })
+    } finally {
+      this.setData({ generatingQuestions: false })
+    }
+  },
+  onAnswerInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const index = Number(event.currentTarget.dataset.index)
+    const answers = [...this.data.answers]
+    answers[index] = event.detail.value
+    this.setData({ answers })
+  },
+  async submitAnswer(event: WechatMiniprogram.CustomEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    const current = this.data.generated[index]
+    const modeID = this.data.selectedModeID
+    if (!current || !modeID || this.data.submittingAnswerIndex === index) return
+    const answer = this.data.answers[index] ?? ''
+    this.setData({ submittingAnswerIndex: index, error: '' })
+    try {
+      const issues = await questionService.analyze({
+        mode_id: modeID,
+        question: current.question,
+        answer_text: answer,
+        answer_key: current.answer_key,
+      })
+      const issueMatrix = [...this.data.issues]
+      issueMatrix[index] = issues
+      this.setData({ issues: issueMatrix })
+      await questionService.create({
+        mode_id: modeID,
+        question: current.question,
+        answer_key: current.answer_key,
+        answer_text: answer,
+        score: issues.length === 0 ? 100 : Math.max(60, 100 - issues.length * 10),
+        pre_generated_id: current.pre_generated_id,
+      })
+      wx.showToast({ title: '已提交', icon: 'success' })
+    } catch (error) {
+      this.setData({
+        error: error instanceof Error ? error.message : '提交答案失败',
+      })
+    } finally {
+      this.setData({ submittingAnswerIndex: -1 })
     }
   },
   playPronunciation(event: WechatMiniprogram.CustomEvent<{ url: string }>) {
@@ -276,38 +419,16 @@ Page<ModePageData>({
   onChooseTask(event: WechatMiniprogram.CustomEvent<{ id: number }>) {
     const itemID = Number(event.currentTarget.dataset.id)
     const selected = this.data.visibleItems.find((item) => item.id === itemID)
-    if (!selected?.mode_id) return
-    const mode: StudyMode = {
-      id: selected.mode_id,
-      name: selected.name,
-      description: selected.description,
-      level: selected.level,
-      numbers: selected.numbers,
-      type: selected.study_type,
-      mode: selected.translation_mode,
-      source: 'plan_auto',
-      plan_item_id: selected.id,
-      theme_id: selected.theme_id,
-      theme_path: selected.theme_path,
-      requirements: selected.requirements,
-    }
+    if (!selected) return
+    const mode = buildModeFromItem(selected)
+    if (!mode) return
     setSelectedMode(mode)
-    this.setData({ selectedModeID: mode.id })
-    wx.showToast({ title: '已选择任务', icon: 'success' })
-  },
-  goPractice() {
-    if (this.data.bundle.goal_required || this.data.bundle.assessment_required) {
-      wx.showToast({ title: '请先完成水平测试', icon: 'none' })
-      return
-    }
-    if (!this.data.selectedModeID) {
-      wx.showToast({ title: '请先选择任务', icon: 'none' })
-      return
-    }
-    wx.navigateTo({ url: '/pages/practice/index' })
-  },
-  goDashboard() {
-    wx.switchTab({ url: '/pages/dashboard/index' })
+    this.setData({
+      selectedPlanItem: selected,
+      selectedModeID: mode.id,
+      selectedType: selected.study_type,
+    })
+    void this.generateQuestionsForPlan(mode.id)
   },
   onLogout() {
     clearSession()

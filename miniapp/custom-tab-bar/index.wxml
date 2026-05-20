@@ -1,0 +1,27 @@
+<view class="tabbar-shell">
+  <view wx:if="{{showSettingsMenu}}" class="menu-popover-wrap">
+    <view class="menu-popover">
+      <view wx:if="{{canManagePermission}}" class="popover-item" data-panel="permission" bindtap="openSettingsPanel">权限</view>
+      <view wx:if="{{canManageKnowledge}}" class="popover-item" data-panel="word" bindtap="openSettingsPanel">知识库</view>
+      <view wx:if="{{canManageTheme}}" class="popover-item" data-panel="theme" bindtap="openSettingsPanel">主题</view>
+      <view class="popover-item" data-panel="profile" bindtap="openSettingsPanel">个人中心</view>
+      <view class="popover-item danger" bindtap="logout">退出</view>
+    </view>
+    <view class="popover-arrow"></view>
+  </view>
+
+  <view class="tabbar">
+    <view class="{{selected === 0 ? 'tab-item active' : 'tab-item'}}" data-index="0" data-path="/pages/dashboard/index" bindtap="switchTab">
+      <text class="tab-item-label">总览</text>
+    </view>
+    <view class="{{selected === 1 ? 'tab-item active' : 'tab-item'}}" data-index="1" data-path="/pages/study/index" bindtap="switchTab">
+      <text class="tab-item-label">学习</text>
+    </view>
+    <view class="{{selected === 2 ? 'tab-item active' : 'tab-item'}}" data-index="2" data-path="/pages/history/index" bindtap="switchTab">
+      <text class="tab-item-label">历史</text>
+    </view>
+    <view class="{{showSettingsMenu ? 'tab-item active' : 'tab-item'}}" data-index="3" bindtap="toggleSettingsMenu">
+      <text class="tab-item-label">设置</text>
+    </view>
+  </view>
+</view>

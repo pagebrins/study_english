@@ -1,19 +1,4 @@
-<view class="page">
-  <view class="hero-card mode-hero aurora-card">
-    <text class="eyebrow">Study Plan</text>
-    <text class="section-title">{{userName}}，把今天的学习任务排明白</text>
-    <text class="section-subtitle">先完成水平测试，再看今天的日历和计划任务，移动端流程会更顺一点。</text>
-    <view class="type-group">
-      <button class="{{selectedType === 1 ? 'type-chip active' : 'type-chip'}}" data-value="1" bindtap="onTypeChange">单词</button>
-      <button class="{{selectedType === 2 ? 'type-chip active' : 'type-chip'}}" data-value="2" bindtap="onTypeChange">句子</button>
-      <button class="{{selectedType === 3 ? 'type-chip active' : 'type-chip'}}" data-value="3" bindtap="onTypeChange">文章</button>
-    </view>
-    <view class="hero-actions">
-      <button class="primary-button action-button" bindtap="goPractice">开始练习</button>
-      <button class="secondary-button action-button soft-button" bindtap="goDashboard">返回总览</button>
-    </view>
-  </view>
-
+<view class="page page-with-bottom-space">
   <view wx:if="{{error}}" class="section-card feedback-card">
     <text class="error-text">{{error}}</text>
   </view>
@@ -22,148 +7,155 @@
     <text class="muted">正在加载学习状态...</text>
   </view>
 
-  <view wx:if="{{!loading && bundle.goal_required}}" class="section-card planner-card onboarding-card">
-    <text class="section-title">Step 1 · 设置学习目标</text>
-    <text class="section-subtitle">先把目标、每日时长和学习时间段定下来，接着进入水平测试。</text>
-    <input class="field-input field-spacing" placeholder="例如：三个月内提升职场英语表达" value="{{goal}}" bindinput="onGoalInput" />
-    <input class="field-input field-spacing" type="number" placeholder="每天学习多少分钟" value="{{dailyMinutes}}" bindinput="onDailyMinutesInput" />
-    <input class="field-input field-spacing" placeholder="例如：工作日 20:00-21:00" value="{{studyTimeRange}}" bindinput="onStudyTimeRangeInput" />
-    <button class="primary-button submit-button" loading="{{startingAssessment}}" bindtap="startInitialAssessment">
-      {{startingAssessment ? '保存中...' : '保存目标并下一步'}}
-    </button>
+  <view wx:if="{{!loading && onboardingIncomplete}}" class="section-card onboarding-entry-card">
+    <button class="primary-button onboarding-entry-button" bindtap="openOnboardingModal">开始入学测试</button>
   </view>
 
-  <view wx:if="{{!loading && !bundle.goal_required && bundle.assessment_required && onboardingStep === 2}}" class="section-card planner-card">
-    <text class="section-title">Step 2 · 单词测试</text>
-    <text class="section-subtitle">当前目标：{{bundle.profile ? bundle.profile.goal : goal}}。先完成单词测试，再进入句子测试。</text>
-    <view wx:for="{{bundle.assessment_items}}" wx:key="id">
-      <view wx:if="{{item.study_type === 1}}" class="assessment-card">
-        <text class="assessment-question">{{index + 1}}. {{item.question}}</text>
-        <button
-          wx:if="{{item.question_pronunciation && item.question_pronunciation.audio_url}}"
-          class="secondary-button pronunciation-button"
-          data-url="{{item.question_pronunciation.audio_url}}"
-          bindtap="playPronunciation"
-        >
-          播放英文题干
-        </button>
-        <textarea
-          class="field-textarea"
-          placeholder="请输入你的答案"
-          value="{{assessmentAnswers[index]}}"
-          data-index="{{index}}"
-          bindinput="onAssessmentAnswerInput"
-        />
+  <block wx:if="{{!loading && !onboardingIncomplete}}">
+    <view class="section-card plan-strip-card">
+      <view class="plan-button-group">
+        <view wx:for="{{visibleItems}}" wx:key="id" class="{{selectedPlanItem && selectedPlanItem.id === item.id ? 'plan-button-card active' : 'plan-button-card'}}" data-id="{{item.id}}" bindtap="onChooseTask">
+          <view class="plan-button-head">
+            <text class="plan-button-name">{{item.name}}</text>
+            <text class="plan-button-desc">{{item.description}}</text>
+          </view>
+          <view class="plan-button-meta-row">
+            <text class="plan-button-meta">{{item.study_type === 1 ? '单词' : item.study_type === 2 ? '句子' : '文章'}}</text>
+            <text class="plan-button-meta">{{item.translation_mode === 1 ? '中译英' : '英译中'}}</text>
+            <text class="plan-button-meta">Lv{{item.level}}</text>
+            <text class="plan-button-meta">{{item.numbers}} 题</text>
+            <text class="plan-button-meta">约 {{item.estimated_minutes}} 分钟</text>
+          </view>
+        </view>
       </view>
     </view>
-    <button class="primary-button submit-button" bindtap="goSentenceStep">下一步：句子测试</button>
-  </view>
 
-  <view wx:if="{{!loading && !bundle.goal_required && bundle.assessment_required && onboardingStep === 3}}" class="section-card planner-card">
-    <text class="section-title">Step 3 · 句子测试</text>
-    <text class="section-subtitle">完成句子测试后，系统会生成用户画像并进入学习计划确认。</text>
-    <view wx:for="{{bundle.assessment_items}}" wx:key="id">
-      <view wx:if="{{item.study_type === 2}}" class="assessment-card">
-        <text class="assessment-question">{{index + 1}}. {{item.question}}</text>
-        <button
-          wx:if="{{item.question_pronunciation && item.question_pronunciation.audio_url}}"
-          class="secondary-button pronunciation-button"
-          data-url="{{item.question_pronunciation.audio_url}}"
-          bindtap="playPronunciation"
-        >
-          播放英文题干
-        </button>
-        <textarea
-          class="field-textarea"
-          placeholder="请输入你的答案"
-          value="{{assessmentAnswers[index]}}"
-          data-index="{{index}}"
-          bindinput="onAssessmentAnswerInput"
-        />
+    <view class="section-card question-panel-card">
+      <view>
+        <text class="section-title">{{selectedPlanItem ? selectedPlanItem.name : '题目练习'}}</text>
+        <text wx:if="{{selectedPlanItem}}" class="section-subtitle">{{selectedPlanItem.description}} · {{selectedPlanItem.translation_mode === 1 ? '中译英' : '英译中'}}</text>
       </view>
-    </view>
-    <view class="hero-actions field-spacing">
-      <button class="ghost-button action-button" bindtap="backToWordStep">上一步</button>
-      <button class="primary-button action-button" loading="{{submittingAssessment}}" bindtap="submitAssessment">
-        {{submittingAssessment ? '提交测试中...' : '提交测试'}}
-      </button>
-    </view>
-  </view>
 
-  <view wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && bundle.plan_generation_required && bundle.profile}}" class="section-card planner-card">
-    <text class="section-title">Step 4 · 确认用户画像</text>
-    <text class="section-subtitle">水平测试已完成。先确认用户画像，再生成学习计划。</text>
-    <view class="profile-metrics">
-      <text class="meta-text">学习目标 {{bundle.profile.goal}}</text>
-      <text class="meta-text">每天 {{bundle.profile.daily_minutes}} 分钟</text>
-      <text class="meta-text">时间段 {{bundle.profile.study_time_range || '待设置'}}</text>
-      <text class="meta-text">单词 Lv{{bundle.profile.word_level}}</text>
-      <text class="meta-text">句子 Lv{{bundle.profile.sentence_level}}</text>
-      <text class="meta-text">综合 Lv{{bundle.profile.overall_level}}</text>
-    </view>
-    <view class="hero-actions field-spacing">
-      <button class="secondary-button action-button soft-button" loading="{{savingGoal}}" bindtap="saveGoal">更新目标并重新测评</button>
-      <button class="primary-button action-button" loading="{{generatingPlan}}" bindtap="generatePlan">
-        {{generatingPlan ? '生成中...' : '生成学习计划'}}
-      </button>
-    </view>
-  </view>
-
-  <view wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && !bundle.plan_generation_required && bundle.profile}}" class="section-card planner-card calendar-card">
-    <text class="section-title">Step 5 · 学习计划</text>
-    <text class="section-subtitle">学习计划已生成，先看本周日历，再挑今天的任务开始。</text>
-    <view class="calendar-row">
-      <view wx:for="{{calendarDays}}" wx:key="key" class="{{item.isPlanDay ? 'calendar-cell active' : item.isToday ? 'calendar-cell today' : 'calendar-cell'}}">
-        <text class="calendar-week">{{item.label}}</text>
-        <text class="calendar-day">{{item.day}}</text>
+      <view wx:if="{{generatingQuestions}}" class="question-loading-card">
+        <text class="muted">正在生成题目，请稍候...</text>
       </view>
-    </view>
-    <view class="calendar-note-row">
-      <text class="calendar-note">计划日：{{bundle.plan ? bundle.plan.plan_date : '待生成'}}</text>
-      <text class="calendar-note">任务数：{{bundle.items.length}}</text>
-    </view>
-  </view>
 
-  <view wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && !bundle.plan_generation_required && bundle.profile}}" class="section-card planner-card">
-    <text class="section-title">当前学习画像</text>
-    <text class="section-subtitle">{{bundle.plan ? bundle.plan.goal_summary : ('目标：' + bundle.profile.goal)}}</text>
-    <view class="profile-metrics">
-      <text class="meta-text">每天 {{bundle.profile.daily_minutes}} 分钟</text>
-      <text class="meta-text">{{bundle.profile.study_time_range || '时间段待设置'}}</text>
-      <text class="meta-text">单词 Lv{{bundle.profile.word_level}}</text>
-      <text class="meta-text">句子 Lv{{bundle.profile.sentence_level}}</text>
-      <text class="meta-text">综合 Lv{{bundle.profile.overall_level}}</text>
-    </view>
-    <text class="field-label">更新学习目标</text>
-    <input class="field-input field-spacing" placeholder="修改后会重新测评" value="{{goal}}" bindinput="onGoalInput" />
-    <input class="field-input field-spacing" type="number" placeholder="每天学习多少分钟" value="{{dailyMinutes}}" bindinput="onDailyMinutesInput" />
-    <input class="field-input" placeholder="例如：工作日 20:00-21:00" value="{{studyTimeRange}}" bindinput="onStudyTimeRangeInput" />
-    <button class="secondary-button submit-button field-spacing" loading="{{savingGoal}}" bindtap="saveGoal">更新目标并重新测评</button>
-  </view>
+      <view wx:if="{{!generatingQuestions && generated.length > 0}}" class="question-list">
+        <view wx:for="{{generated}}" wx:for-item="questionItem" wx:key="index" class="question-card question-item">
+          <text class="question-index">第 {{index + 1}} 题</text>
+          <text class="question-text">{{questionItem.question}}</text>
+          <button
+            wx:if="{{questionItem.question_pronunciation && questionItem.question_pronunciation.audio_url}}"
+            class="secondary-button pronunciation-button"
+            data-url="{{questionItem.question_pronunciation.audio_url}}"
+            bindtap="playPronunciation"
+          >
+            播放英文题干
+          </button>
+          <textarea
+            class="field-textarea"
+            placeholder="请输入你的答案"
+            value="{{answers[index]}}"
+            data-index="{{index}}"
+            bindinput="onAnswerInput"
+          />
+          <button class="primary-button submit-button" data-index="{{index}}" loading="{{submittingAnswerIndex === index}}" bindtap="submitAnswer">
+            {{submittingAnswerIndex === index ? '提交中...' : '提交答案'}}
+          </button>
 
-  <empty-state
-    wx:if="{{!loading && !bundle.goal_required && !bundle.assessment_required && visibleItems.length === 0}}"
-    title="当前分类下暂无任务"
-    description="切换上面的分类，查看系统为你安排的今日训练。"
-  />
+          <view wx:if="{{issues[index] && issues[index].length > 0}}" class="issue-box">
+            <text class="issue-title">问题反馈</text>
+            <text wx:for="{{issues[index]}}" wx:for-item="issue" wx:key="*this" class="issue-item">{{issue}}</text>
+            <text class="success-text">标准答案：{{questionItem.answer_key}}</text>
+            <button
+              wx:if="{{questionItem.answer_key_pronunciation && questionItem.answer_key_pronunciation.audio_url}}"
+              class="secondary-button pronunciation-button"
+              data-url="{{questionItem.answer_key_pronunciation.audio_url}}"
+              bindtap="playPronunciation"
+            >
+              播放英文答案
+            </button>
+          </view>
 
-  <view wx:for="{{visibleItems}}" wx:key="id" class="{{selectedModeID === item.mode_id ? 'section-card mode-card active' : 'section-card mode-card'}}" data-id="{{item.id}}" bindtap="onChooseTask">
-    <view class="mode-card-head">
-      <text class="mode-title">{{item.name}}</text>
-      <text class="pill">Lv{{item.level}}</text>
-    </view>
-    <text class="mode-description">{{item.description}}</text>
-    <view class="mode-meta">
-      <text class="meta-text">题量 {{item.numbers}}</text>
-      <text class="meta-text">方向 {{item.translation_mode === 1 ? '中译英' : '英译中'}}</text>
-      <text class="meta-text">约 {{item.estimated_minutes}} 分钟</text>
-    </view>
-    <view wx:if="{{item.requirements.length > 0}}" class="requirement-list">
-      <text wx:for="{{item.requirements}}" wx:key="*this" class="requirement-item">{{item}}</text>
-    </view>
-  </view>
+          <view wx:if="{{issues[index] && issues[index].length === 0}}" class="issue-box ok-box">
+            <text class="success-text">回答不错，这题已经通过。</text>
+          </view>
+        </view>
+      </view>
 
-  <view class="bottom-actions">
-    <button class="ghost-button bottom-button" bindtap="onLogout">退出登录</button>
+      <text wx:if="{{!generatingQuestions && selectedPlanItem && generated.length === 0}}" class="muted empty-question-tip">正在为当前计划准备题目。</text>
+      <text wx:if="{{!selectedPlanItem && visibleItems.length === 0}}" class="muted empty-question-tip">当前没有可用的学习计划。</text>
+    </view>
+  </block>
+
+  <view wx:if="{{showOnboardingModal}}" class="modal-mask" catchtap="closeOnboardingModal">
+    <view class="modal-panel" catchtap="noop">
+      <view class="modal-head">
+        <view>
+          <text class="section-title">Learning Onboarding</text>
+          <text class="section-subtitle">Step {{onboardingStep}} / 5</text>
+        </view>
+        <button class="ghost-button modal-close" bindtap="closeOnboardingModal">关闭</button>
+      </view>
+
+      <scroll-view scroll-y class="modal-scroll">
+        <view wx:if="{{bundle.goal_required}}" class="modal-step">
+          <text class="section-title">Step 1 · 设置学习目标</text>
+          <input class="field-input field-spacing" placeholder="请输入学习目标" value="{{goal}}" bindinput="onGoalInput" />
+          <input class="field-input field-spacing" type="number" placeholder="每天学习多少分钟" value="{{dailyMinutes}}" bindinput="onDailyMinutesInput" />
+          <input class="field-input field-spacing" placeholder="请输入学习时间段" value="{{studyTimeRange}}" bindinput="onStudyTimeRangeInput" />
+          <button class="primary-button submit-button field-spacing" loading="{{startingAssessment}}" bindtap="startInitialAssessment">{{startingAssessment ? '保存中...' : '保存目标并下一步'}}</button>
+        </view>
+
+        <view wx:if="{{!bundle.goal_required && bundle.assessment_required && onboardingStep === 2}}" class="modal-step">
+          <text class="section-title">Step 2 · 单词测试</text>
+          <view wx:for="{{bundle.assessment_items}}" wx:key="id">
+            <view wx:if="{{item.study_type === 1}}" class="assessment-card">
+              <text class="assessment-question">{{index + 1}}. {{item.question}}</text>
+              <button wx:if="{{item.question_pronunciation && item.question_pronunciation.audio_url}}" class="secondary-button pronunciation-button" data-url="{{item.question_pronunciation.audio_url}}" bindtap="playPronunciation">播放英文题干</button>
+              <textarea class="field-textarea" placeholder="请输入你的答案" value="{{assessmentAnswers[index]}}" data-index="{{index}}" bindinput="onAssessmentAnswerInput" />
+            </view>
+          </view>
+          <button class="primary-button submit-button field-spacing" bindtap="goSentenceStep">下一步：句子测试</button>
+        </view>
+
+        <view wx:if="{{!bundle.goal_required && bundle.assessment_required && onboardingStep === 3}}" class="modal-step">
+          <text class="section-title">Step 3 · 句子测试</text>
+          <view wx:for="{{bundle.assessment_items}}" wx:key="id">
+            <view wx:if="{{item.study_type === 2}}" class="assessment-card">
+              <text class="assessment-question">{{index + 1}}. {{item.question}}</text>
+              <button wx:if="{{item.question_pronunciation && item.question_pronunciation.audio_url}}" class="secondary-button pronunciation-button" data-url="{{item.question_pronunciation.audio_url}}" bindtap="playPronunciation">播放英文题干</button>
+              <textarea class="field-textarea" placeholder="请输入你的答案" value="{{assessmentAnswers[index]}}" data-index="{{index}}" bindinput="onAssessmentAnswerInput" />
+            </view>
+          </view>
+          <view class="hero-actions field-spacing">
+            <button class="ghost-button action-button" bindtap="backToWordStep">上一步</button>
+            <button class="primary-button action-button" loading="{{submittingAssessment}}" bindtap="submitAssessment">{{submittingAssessment ? '提交测试中...' : '提交测试'}}</button>
+          </view>
+        </view>
+
+        <view wx:if="{{!bundle.goal_required && !bundle.assessment_required && bundle.plan_generation_required && bundle.profile}}" class="modal-step">
+          <text class="section-title">Step 4 · 确认用户画像</text>
+          <view class="profile-metrics">
+            <text class="meta-text">学习目标 {{bundle.profile.goal}}</text>
+            <text class="meta-text">每天 {{bundle.profile.daily_minutes}} 分钟</text>
+            <text class="meta-text">时间段 {{bundle.profile.study_time_range || '待设置'}}</text>
+            <text class="meta-text">单词 Lv{{bundle.profile.word_level}}</text>
+            <text class="meta-text">句子 Lv{{bundle.profile.sentence_level}}</text>
+            <text class="meta-text">综合 Lv{{bundle.profile.overall_level}}</text>
+          </view>
+          <view class="hero-actions field-spacing">
+            <button class="secondary-button action-button soft-button" loading="{{savingGoal}}" bindtap="saveGoal">更新目标并重新测评</button>
+            <button class="primary-button action-button" loading="{{generatingPlan}}" bindtap="generatePlan">{{generatingPlan ? '生成中...' : '生成学习计划'}}</button>
+          </view>
+        </view>
+
+        <view wx:if="{{!bundle.goal_required && !bundle.assessment_required && !bundle.plan_generation_required && bundle.profile}}" class="modal-step">
+          <text class="section-title">Step 5 · 学习计划</text>
+          <text class="section-subtitle">学习计划已生成，点击上方 plan 卡片即可自动生成题目。</text>
+          <button class="primary-button submit-button field-spacing" bindtap="closeOnboardingModal">完成</button>
+        </view>
+      </scroll-view>
+    </view>
   </view>
 </view>

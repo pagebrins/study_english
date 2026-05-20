@@ -1,11 +1,15 @@
 import { ensureWechatLogin } from '../../utils/auth'
 import { isLoggedIn } from '../../utils/session'
 
+const isPlaceholderNickname = (nickname: string) => {
+  const value = nickname.trim()
+  return !value || value === '微信用户' || value.startsWith('微信用户')
+}
+
 Page({
   data: {
     loading: false,
     error: '',
-    showNamePrompt: false,
     nickname: '',
   },
   onShow() {
@@ -21,18 +25,10 @@ Page({
       wx.switchTab({ url: '/pages/dashboard/index' })
     } catch (error) {
       const message = error instanceof Error ? error.message : '微信登录失败，请稍后重试'
-      if (message.includes('first wechat login requires name')) {
-        this.setData({ showNamePrompt: true, error: '' })
-        wx.showToast({ title: '首次登录请先设置昵称', icon: 'none' })
-        return
-      }
       this.setData({ error: message })
     } finally {
       this.setData({ loading: false })
     }
-  },
-  onWechatLogin() {
-    this.setData({ showNamePrompt: true, error: '' })
   },
   onNicknameInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ nickname: event.detail.value })
@@ -41,28 +37,28 @@ Page({
     try {
       const profile = await new Promise<WechatMiniprogram.GetUserProfileSuccessCallbackResult>((resolve, reject) => {
         wx.getUserProfile({
-          desc: '用于首次登录时补充昵称',
+          desc: '用于登录时补充昵称',
           success: resolve,
           fail: reject,
         })
       })
-      this.setData({ nickname: profile.userInfo.nickName || '' })
+      const nickname = String(profile.userInfo.nickName || '').trim()
+      if (isPlaceholderNickname(nickname)) {
+        wx.showToast({ title: '微信未返回可用昵称，请手动填写', icon: 'none' })
+        return
+      }
+      this.setData({ nickname })
+      await this.doWechatLogin(nickname)
     } catch (_error) {
       wx.showToast({ title: '未获取到微信昵称', icon: 'none' })
     }
   },
   async onConfirmNickname() {
     const nickname = String(this.data.nickname || '').trim()
-    if (!nickname) {
-      wx.showToast({ title: '请先填写昵称', icon: 'none' })
+    if (isPlaceholderNickname(nickname)) {
+      wx.showToast({ title: '请填写一个有效昵称', icon: 'none' })
       return
     }
     await this.doWechatLogin(nickname)
-  },
-  async onDirectWechatLogin() {
-    await this.doWechatLogin()
-  },
-  onCloseNamePrompt() {
-    this.setData({ showNamePrompt: false, error: '' })
   },
 })

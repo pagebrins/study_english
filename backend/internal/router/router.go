@@ -113,6 +113,7 @@ func Build(
 	authGroup.GET("/wechat-web/start", authHandler.WechatWebStart)
 	authGroup.GET("/wechat-web/callback", authHandler.WechatWebCallback)
 	authGroup.POST("/reset-password", authHandler.ResetPassword)
+	v1.GET("/pronunciations/stream", pronunciationHandler.Stream)
 
 	protected := v1.Group("")
 	protected.Use(middleware.Auth(jwtSecret, repo))
@@ -126,7 +127,6 @@ func Build(
 	protected.GET("/words", wordHandler.List)
 	protected.GET("/words/export", wordHandler.Export)
 	protected.POST("/pronunciations", pronunciationHandler.Build)
-	protected.GET("/pronunciations/stream", pronunciationHandler.Stream)
 	protected.GET("/learning-plans/current", learningPlanHandler.Current)
 	protected.POST("/learning-plans/generate", learningPlanHandler.GeneratePlan)
 	protected.POST("/learning-profiles/goal", learningPlanHandler.SetGoal)

@@ -8,6 +8,7 @@ App<IAppOption>({
     selectedMode: getSelectedMode(),
     explainContext: getExplainContext(),
     settingsPanel: 'none',
+    openOnboardingModal: false,
   },
   onLaunch() {
     this.globalData.token = getStorageToken()
@@ -15,6 +16,7 @@ App<IAppOption>({
     this.globalData.selectedMode = getSelectedMode()
     this.globalData.explainContext = getExplainContext()
     this.globalData.settingsPanel = 'none'
+    this.globalData.openOnboardingModal = false
   },
   isAuthed() {
     return isLoggedIn()
