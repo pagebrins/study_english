@@ -39,8 +39,12 @@
   padding: 28rpx;
 }
 
-.planner-card .field-label:not(:first-child) {
-  margin-top: 24rpx;
+.onboarding-card {
+  background: linear-gradient(180deg, #fffdf7 0%, #ffffff 100%);
+}
+
+.field-spacing {
+  margin-top: 20rpx;
 }
 
 .assessment-card {
@@ -56,6 +60,66 @@
   color: #0f172a;
   font-size: 28rpx;
   line-height: 1.7;
+}
+
+.calendar-card {
+  background:
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.14), transparent 32%),
+    linear-gradient(180deg, #ffffff 0%, #f8fffe 100%);
+}
+
+.calendar-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12rpx;
+  margin-top: 22rpx;
+}
+
+.calendar-cell {
+  padding: 18rpx 8rpx;
+  border-radius: 20rpx;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.calendar-cell.today {
+  border: 2rpx solid #93c5fd;
+  background: #eff6ff;
+}
+
+.calendar-cell.active {
+  background: linear-gradient(160deg, #0f766e 0%, #14b8a6 100%);
+}
+
+.calendar-cell.active .calendar-week,
+.calendar-cell.active .calendar-day {
+  color: #ffffff;
+}
+
+.calendar-week {
+  display: block;
+  color: #64748b;
+  font-size: 22rpx;
+}
+
+.calendar-day {
+  display: block;
+  margin-top: 8rpx;
+  color: #0f172a;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.calendar-note-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-top: 18rpx;
+}
+
+.calendar-note {
+  color: #64748b;
+  font-size: 22rpx;
 }
 
 .mode-card.active {
@@ -99,22 +163,6 @@
   flex-wrap: wrap;
   gap: 12rpx;
   margin-top: 20rpx;
-}
-
-.focus-option {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  margin-top: 12rpx;
-  color: #334155;
-  font-size: 26rpx;
-}
-
-.focus-summary {
-  display: block;
-  margin-top: 12rpx;
-  color: #64748b;
-  font-size: 24rpx;
 }
 
 .profile-metrics {

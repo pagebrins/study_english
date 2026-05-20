@@ -1,80 +1,37 @@
-<view class="page page-with-bottom-space">
-  <view class="hero-card settings-hero aurora-card warm-card">
+<view class="page settings-page page-with-bottom-space">
+  <view class="hero-card settings-hero warm-card aurora-card">
     <text class="eyebrow">Settings Center</text>
-    <text class="section-title">{{userName}}，把小程序调成顺手的工作台</text>
-    <text class="section-subtitle">这里整合了 Web 端的模式、主题、知识库和权限能力，但交互会更偏移动端卡片操作。</text>
+    <text class="section-title">把小程序调成你的顺手工作台</text>
+    <text class="section-subtitle">设置页按 Web 权限规则开放，交互改成更接近 tab 上方弹出菜单的样式。</text>
   </view>
 
-  <view wx:if="{{error}}" class="section-card section-spacing">
+  <view wx:if="{{error}}" class="section-card content-card section-spacing">
     <text class="error-text">{{error}}</text>
   </view>
 
-  <view class="section-card section-spacing">
-    <scroll-view scroll-x class="tab-scroll" enable-flex="true">
-      <view class="tab-row">
-        <button wx:if="{{canManageMode}}" class="{{activeTab === 'mode' ? 'tab-chip active' : 'tab-chip'}}" data-tab="mode" bindtap="switchTab">模式</button>
-        <button wx:if="{{canManageTheme}}" class="{{activeTab === 'theme' ? 'tab-chip active' : 'tab-chip'}}" data-tab="theme" bindtap="switchTab">主题</button>
-        <button wx:if="{{canManageKnowledge}}" class="{{activeTab === 'word' ? 'tab-chip active' : 'tab-chip'}}" data-tab="word" bindtap="switchTab">词库</button>
-        <button wx:if="{{canManagePermission}}" class="{{activeTab === 'permission' ? 'tab-chip active' : 'tab-chip'}}" data-tab="permission" bindtap="switchTab">权限</button>
-      </view>
-    </scroll-view>
-  </view>
-
-  <view wx:if="{{loading}}" class="section-card section-spacing">
+  <view wx:if="{{loading}}" class="section-card content-card section-spacing">
     <text class="muted">正在加载设置内容...</text>
   </view>
 
-  <empty-state
-    wx:if="{{!loading && !canManageMode && !canManageTheme && !canManageKnowledge && !canManagePermission}}"
-    title="当前账号没有设置权限"
-    description="如果你需要在小程序里管理模式、主题或权限，请让管理员为你分配对应权限。"
-  />
-
-  <view wx:if="{{!loading && activeTab === 'mode' && canManageMode}}" class="section-card section-spacing">
-    <text class="section-title">{{modeEditingID ? '编辑模式' : '创建模式'}}</text>
-    <text class="section-subtitle">对应 Web 的 Mode Settings，适合管理手动模式。</text>
-    <input class="field-input field-spacing" placeholder="模式名称" value="{{modeName}}" data-field="modeName" bindinput="onModeInput" />
-    <input class="field-input field-spacing" placeholder="模式描述" value="{{modeDescription}}" data-field="modeDescription" bindinput="onModeInput" />
-    <view class="dual-grid field-spacing">
-      <input class="field-input" type="number" placeholder="难度" value="{{modeLevel}}" data-field="modeLevel" bindinput="onModeInput" />
-      <input class="field-input" type="number" placeholder="题量" value="{{modeNumbers}}" data-field="modeNumbers" bindinput="onModeInput" />
+  <view wx:if="{{!loading && activePanel === 'profile'}}" class="section-card content-card section-spacing">
+    <text class="section-title">Profile</text>
+    <text class="section-subtitle">账号信息和当前权限概览。</text>
+    <view class="profile-card">
+      <text class="profile-name">{{userName}}</text>
+      <text class="profile-meta">{{userEmail || '暂无邮箱'}}</text>
+      <text class="profile-meta">角色：{{userRoleName}} / {{userRoleCode}}</text>
     </view>
-    <view class="type-group">
-      <button class="{{modeType === 1 ? 'type-chip active' : 'type-chip'}}" data-value="1" bindtap="onModeTypeChange">单词</button>
-      <button class="{{modeType === 2 ? 'type-chip active' : 'type-chip'}}" data-value="2" bindtap="onModeTypeChange">句子</button>
-      <button class="{{modeType === 3 ? 'type-chip active' : 'type-chip'}}" data-value="3" bindtap="onModeTypeChange">文章</button>
-    </view>
-    <view class="type-group">
-      <button class="{{modeTranslationMode === 1 ? 'type-chip active' : 'type-chip'}}" data-value="1" bindtap="onModeTranslationChange">中译英</button>
-      <button class="{{modeTranslationMode === 2 ? 'type-chip active' : 'type-chip'}}" data-value="2" bindtap="onModeTranslationChange">英译中</button>
-    </view>
-    <textarea class="field-textarea field-spacing" placeholder="要求列表，每行一条" value="{{modeRequirementsText}}" data-field="modeRequirementsText" bindinput="onModeInput" />
-    <view class="hero-actions">
-      <button class="primary-button action-button" bindtap="submitMode">保存模式</button>
-      <button class="ghost-button action-button" bindtap="resetModeForm">重置</button>
-    </view>
-
-    <empty-state wx:if="{{modes.length === 0}}" title="还没有手动模式" description="先创建一个模式，练习页就可以直接使用。" />
-    <view wx:for="{{modes}}" wx:key="id" class="settings-item-card">
-      <view class="task-head">
-        <text class="task-title">{{item.name}}</text>
-        <text class="pill">{{item.source === 'manual' ? '手动' : '计划'}}</text>
+    <view class="permission-pills">
+      <view wx:for="{{visiblePermissionCodes}}" wx:key="*this" class="permission-pill">
+        <text class="permission-pill-text">{{item === 'dashboard.view' ? '总览' : item === 'study.view' ? '学习' : item === 'history.view' ? '历史' : item === 'practice.use' ? '练习' : item === 'chat.use' ? 'AI 讲解' : item === 'settings.theme.manage' ? '主题管理' : item === 'settings.knowledge.manage' ? '知识库管理' : item === 'settings.permission.manage' ? '权限管理' : item}}</text>
       </view>
-      <text class="task-description">{{item.description}}</text>
-      <view class="tag-row">
-        <text class="tag">Lv{{item.level}}</text>
-        <text class="tag">{{item.numbers}} 题</text>
-        <text class="tag">{{item.mode === 1 ? '中译英' : '英译中'}}</text>
-      </view>
-      <view class="hero-actions">
-        <button class="secondary-button action-button soft-button" data-id="{{item.id}}" bindtap="editMode">编辑</button>
-        <button class="ghost-button action-button" data-id="{{item.id}}" bindtap="removeMode">删除</button>
-      </view>
+      <text wx:if="{{visiblePermissionCodes.length === 0}}" class="muted">当前没有可展示的业务权限。</text>
     </view>
   </view>
 
-  <view wx:if="{{!loading && activeTab === 'theme' && canManageTheme}}" class="section-card section-spacing">
-    <text class="section-title">{{themeEditingID ? '编辑主题' : '创建主题'}}</text>
+  <view wx:if="{{!loading && activePanel === 'theme' && canManageTheme}}" class="section-card content-card section-spacing">
+    <text class="section-title">主题</text>
+    <text class="section-subtitle">按树形层级维护学习主题。</text>
     <input class="field-input field-spacing" placeholder="主题名称" value="{{themeName}}" data-field="themeName" bindinput="onThemeInput" />
     <view class="type-group">
       <button class="{{themeLevel === 1 ? 'type-chip active' : 'type-chip'}}" data-value="1" bindtap="onThemeLevelChange">一级</button>
@@ -85,27 +42,28 @@
       <view class="field-picker field-spacing">{{themeParentNames[themeParentPickerIndex] || '无父级'}}</view>
     </picker>
     <input class="field-input field-spacing" type="number" placeholder="排序值" value="{{themeSortOrder}}" data-field="themeSortOrder" bindinput="onThemeInput" />
-    <view class="hero-actions">
+    <view class="hero-actions field-spacing">
       <button class="primary-button action-button" bindtap="submitTheme">保存主题</button>
       <button class="ghost-button action-button" bindtap="resetThemeForm">重置</button>
     </view>
 
-    <empty-state wx:if="{{themes.length === 0}}" title="还没有主题" description="创建后学习计划和模式可以挂接到主题树。" />
+    <empty-state wx:if="{{themes.length === 0}}" title="还没有主题" description="先补一组主题树，后续计划挂接会更顺。" />
     <view wx:for="{{themes}}" wx:key="id" class="settings-item-card">
       <view class="task-head">
         <text class="task-title">L{{item.level}} · {{item.name}}</text>
         <text class="pill">Sort {{item.sort_order}}</text>
       </view>
       <text class="task-description">父级 ID：{{item.parent_id || 0}}</text>
-      <view class="hero-actions">
+      <view class="hero-actions compact-actions">
         <button class="secondary-button action-button soft-button" data-id="{{item.id}}" bindtap="editTheme">编辑</button>
         <button class="ghost-button action-button" data-id="{{item.id}}" bindtap="removeTheme">删除</button>
       </view>
     </view>
   </view>
 
-  <view wx:if="{{!loading && activeTab === 'word' && canManageKnowledge}}" class="section-card section-spacing">
-    <text class="section-title">{{wordEditingID ? '编辑词条' : '添加词条'}}</text>
+  <view wx:if="{{!loading && activePanel === 'word' && canManageKnowledge}}" class="section-card content-card section-spacing">
+    <text class="section-title">知识库</text>
+    <text class="section-subtitle">录入词条时尽量短平快，方便手机端维护。</text>
     <input class="field-input field-spacing" placeholder="单词 / 词组" value="{{wordValue}}" data-field="wordValue" bindinput="onWordInput" />
     <textarea class="field-textarea field-spacing" placeholder="释义" value="{{wordDefinition}}" data-field="wordDefinition" bindinput="onWordInput" />
     <view class="dual-grid field-spacing">
@@ -113,31 +71,32 @@
       <input class="field-input" placeholder="二级分类" value="{{wordL2Category}}" data-field="wordL2Category" bindinput="onWordInput" />
     </view>
     <textarea class="field-textarea field-spacing" placeholder="例句" value="{{wordExample}}" data-field="wordExample" bindinput="onWordInput" />
-    <input class="field-input field-spacing" placeholder="标签，英文逗号分隔" value="{{wordTagsText}}" data-field="wordTagsText" bindinput="onWordInput" />
-    <view class="hero-actions">
+    <input class="field-input field-spacing" placeholder="标签，用逗号分隔" value="{{wordTagsText}}" data-field="wordTagsText" bindinput="onWordInput" />
+    <view class="hero-actions field-spacing">
       <button class="primary-button action-button" bindtap="submitWord">保存词条</button>
       <button class="ghost-button action-button" bindtap="resetWordForm">重置</button>
     </view>
 
-    <empty-state wx:if="{{words.length === 0}}" title="词库还是空的" description="可以先从高频词或常见场景词开始录入。" />
+    <empty-state wx:if="{{words.length === 0}}" title="词库还是空的" description="可以先从高频词和场景短语开始。" />
     <view wx:for="{{words}}" wx:key="id" class="settings-item-card">
       <view class="task-head">
         <text class="task-title">{{item.word}}</text>
-        <text class="pill">{{item.l1_category}}</text>
+        <text class="pill">{{item.l1_category || '未分类'}}</text>
       </view>
       <text class="task-description">{{item.definition}}</text>
       <view class="tag-row">
         <text wx:for="{{item.tags}}" wx:key="id" class="tag">{{item.category_name}}</text>
       </view>
-      <view class="hero-actions">
+      <view class="hero-actions compact-actions">
         <button class="secondary-button action-button soft-button" data-id="{{item.id}}" bindtap="editWord">编辑</button>
         <button class="ghost-button action-button" data-id="{{item.id}}" bindtap="removeWord">删除</button>
       </view>
     </view>
   </view>
 
-  <view wx:if="{{!loading && activeTab === 'permission' && canManagePermission}}" class="section-card section-spacing">
-    <text class="section-title">角色权限</text>
+  <view wx:if="{{!loading && activePanel === 'permission' && canManagePermission}}" class="section-card content-card section-spacing">
+    <text class="section-title">权限</text>
+    <text class="section-subtitle">沿用 Web 的角色与权限规则。</text>
     <picker mode="selector" range="{{roleNames}}" bindchange="onRoleChange">
       <view class="field-picker field-spacing">{{selectedRoleName || '暂无角色'}}</view>
     </picker>
@@ -148,12 +107,12 @@
       </view>
       <switch checked="{{item.checked}}" color="#0f766e" />
     </view>
-    <button class="primary-button submit-button" bindtap="saveRolePermissions">保存当前角色权限</button>
+    <button class="primary-button submit-button field-spacing" bindtap="saveRolePermissions">保存当前角色权限</button>
 
     <view class="section-head role-user-head">
       <view>
         <text class="section-title">用户角色</text>
-        <text class="section-subtitle">适合在手机上做轻量角色调整。</text>
+        <text class="section-subtitle">手机端只做轻量调整，不做复杂批量编辑。</text>
       </view>
     </view>
     <view wx:for="{{userRoles}}" wx:key="user_id" class="settings-item-card">
@@ -167,5 +126,20 @@
         </picker>
       </view>
     </view>
+  </view>
+
+  <view wx:if="{{!loading && ((activePanel === 'theme' && !canManageTheme) || (activePanel === 'word' && !canManageKnowledge) || (activePanel === 'permission' && !canManagePermission))}}" class="section-card content-card section-spacing">
+    <text class="error-text">当前账号没有这个设置项的操作权限。</text>
+  </view>
+
+  <view wx:if="{{showSheet}}" class="menu-popover-wrap">
+    <view class="menu-popover">
+      <button wx:if="{{canManagePermission}}" class="{{activePanel === 'permission' ? 'popover-item active' : 'popover-item'}}" data-panel="permission" bindtap="switchPanel">权限</button>
+      <button wx:if="{{canManageKnowledge}}" class="{{activePanel === 'word' ? 'popover-item active' : 'popover-item'}}" data-panel="word" bindtap="switchPanel">知识库</button>
+      <button wx:if="{{canManageTheme}}" class="{{activePanel === 'theme' ? 'popover-item active' : 'popover-item'}}" data-panel="theme" bindtap="switchPanel">主题</button>
+      <button class="{{activePanel === 'profile' ? 'popover-item active' : 'popover-item'}}" data-panel="profile" bindtap="switchPanel">个人中心</button>
+      <button class="popover-item danger" bindtap="onLogout">退出</button>
+    </view>
+    <view class="popover-arrow"></view>
   </view>
 </view>

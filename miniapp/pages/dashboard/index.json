@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "学习总览",
+  "navigationBarTitleText": "总览",
   "usingComponents": {
     "empty-state": "/components/empty-state/index"
   }

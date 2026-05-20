@@ -277,9 +277,6 @@ INSERT INTO permissions (code, name, description)
 SELECT 'dashboard.view', 'Dashboard View', 'Access dashboard pages'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'dashboard.view');
 INSERT INTO permissions (code, name, description)
-SELECT 'modes.manage', 'Modes Manage', 'Access and manage modes'
-WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'modes.manage');
-INSERT INTO permissions (code, name, description)
 SELECT 'study.view', 'Study View', 'Access study pages'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'study.view');
 INSERT INTO permissions (code, name, description)
@@ -314,7 +311,7 @@ WHERE r.code = 'admin'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
-JOIN permissions p ON p.code IN ('dashboard.view', 'modes.manage', 'study.view', 'history.view', 'practice.use', 'chat.use')
+JOIN permissions p ON p.code IN ('dashboard.view', 'study.view', 'history.view', 'practice.use', 'chat.use')
 WHERE r.code = 'learner'
   AND NOT EXISTS (
     SELECT 1 FROM role_permissions rp
@@ -324,7 +321,7 @@ WHERE r.code = 'learner'
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
-JOIN permissions p ON p.code IN ('dashboard.view', 'modes.manage', 'study.view', 'history.view', 'practice.use')
+JOIN permissions p ON p.code IN ('dashboard.view', 'study.view', 'history.view', 'practice.use')
 WHERE r.code = 'guest'
   AND NOT EXISTS (
     SELECT 1 FROM role_permissions rp

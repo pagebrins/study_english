@@ -3,8 +3,9 @@ import { modeService } from '../../services/mode'
 import { questionService } from '../../services/question'
 import { scoreService } from '../../services/score'
 import { requireLogin } from '../../utils/guard'
+import { hasPermission } from '../../utils/permission'
 import { miniappConfig } from '../../utils/config'
-import { setExplainContext } from '../../utils/session'
+import { getStorageUser, setExplainContext } from '../../utils/session'
 import type { StudyMode } from '../../types/mode'
 import type { UserQuestion } from '../../types/question'
 
@@ -24,6 +25,9 @@ type HistoryData = {
   selectedModeName: string
   score: number
   answered: number
+  canView: boolean
+  canPractice: boolean
+  canChat: boolean
 }
 
 Page<HistoryData>({
@@ -39,9 +43,23 @@ Page<HistoryData>({
     selectedModeName: '全部模式',
     score: 0,
     answered: 0,
+    canView: true,
+    canPractice: false,
+    canChat: false,
   },
   onShow() {
     if (!requireLogin()) return
+    const user = getStorageUser()
+    const canView = hasPermission(user, 'history.view')
+    const canPractice = hasPermission(user, 'practice.use')
+    const canChat = hasPermission(user, 'chat.use')
+    this.setData({
+      canView,
+      canPractice,
+      canChat,
+      error: canView ? '' : '当前账号没有历史页访问权限。',
+    })
+    if (!canView) return
     void this.ensureLearningReady()
   },
   async ensureLearningReady() {
@@ -113,6 +131,10 @@ Page<HistoryData>({
     void this.bootstrap()
   },
   askAI(event: WechatMiniprogram.CustomEvent) {
+    if (!this.data.canChat) {
+      wx.showToast({ title: '当前账号没有 AI 讲解权限', icon: 'none' })
+      return
+    }
     const index = Number(event.currentTarget.dataset.index)
     const question = this.data.items[index]
     if (!question) return
@@ -154,6 +176,10 @@ Page<HistoryData>({
     historyPronunciationPlayer?.stop()
   },
   goPractice() {
-    wx.switchTab({ url: '/pages/practice/index' })
+    if (!this.data.canPractice) {
+      wx.showToast({ title: '当前账号没有练习权限', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url: '/pages/practice/index' })
   },
 })

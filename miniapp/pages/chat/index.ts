@@ -1,6 +1,7 @@
 import { questionService } from '../../services/question'
 import { requireLogin } from '../../utils/guard'
-import { getExplainContext } from '../../utils/session'
+import { hasPermission } from '../../utils/permission'
+import { getExplainContext, getStorageUser } from '../../utils/session'
 import type { ExplainChatPageContext } from '../../types/question'
 
 type ChatMessage = {
@@ -17,6 +18,7 @@ type ChatData = {
   sessionID: string
   messages: ChatMessage[]
   source: string
+  canUseChat: boolean
 }
 
 const buildMessage = (role: ChatMessage['role'], content: string): ChatMessage => ({
@@ -34,6 +36,7 @@ Page<ChatData>({
     sessionID: '',
     messages: [],
     source: 'other',
+    canUseChat: false,
   },
   onLoad(query) {
     this.setData({
@@ -42,6 +45,12 @@ Page<ChatData>({
   },
   onShow() {
     if (!requireLogin()) return
+    const canUseChat = hasPermission(getStorageUser(), 'chat.use')
+    if (!canUseChat) {
+      this.setData({ canUseChat, error: '当前账号没有 AI 讲解权限。', messages: [] })
+      wx.showToast({ title: '当前账号没有 AI 讲解权限', icon: 'none' })
+      return
+    }
     const context = getExplainContext()
     const messages: ChatMessage[] = []
     if (context?.current_question_index) {
@@ -49,12 +58,13 @@ Page<ChatData>({
     } else {
       messages.push(buildMessage('system', '可以直接提问；如果想聊某一道题，请在问题里写出题号。'))
     }
-    this.setData({ messages })
+    this.setData({ messages, canUseChat, error: '' })
   },
   onInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ input: event.detail.value })
   },
   async onSend() {
+    if (!this.data.canUseChat) return
     const userMessage = this.data.input.trim()
     const context = getExplainContext() ?? ({ page: 'other' } as ExplainChatPageContext)
     if (!userMessage || this.data.sending) return

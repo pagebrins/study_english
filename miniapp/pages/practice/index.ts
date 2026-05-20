@@ -1,8 +1,9 @@
 import { learningPlanService } from '../../services/learningPlan'
 import { questionService } from '../../services/question'
 import { requireLogin } from '../../utils/guard'
+import { hasPermission } from '../../utils/permission'
 import { miniappConfig } from '../../utils/config'
-import { getSelectedMode, setExplainContext } from '../../utils/session'
+import { getSelectedMode, getStorageUser, setExplainContext } from '../../utils/session'
 import type { GeneratedQuestion } from '../../types/question'
 import type { StudyMode } from '../../types/mode'
 
@@ -18,6 +19,8 @@ type PracticeData = {
   generated: GeneratedQuestion[]
   answers: string[]
   issues: string[][]
+  canUsePractice: boolean
+  canUseChat: boolean
 }
 
 Page<PracticeData>({
@@ -29,9 +32,20 @@ Page<PracticeData>({
     generated: [],
     answers: [],
     issues: [],
+    canUsePractice: false,
+    canUseChat: false,
   },
   onShow() {
     if (!requireLogin()) return
+    const user = getStorageUser()
+    const canUsePractice = hasPermission(user, 'practice.use')
+    const canUseChat = hasPermission(user, 'chat.use')
+    this.setData({ canUsePractice, canUseChat })
+    if (!canUsePractice) {
+      this.setData({ error: '当前账号没有练习权限。' })
+      wx.showToast({ title: '当前账号没有练习权限', icon: 'none' })
+      return
+    }
     void this.ensureLearningReady()
   },
   async ensureLearningReady() {
@@ -47,7 +61,7 @@ Page<PracticeData>({
         return
       }
       const mode = getSelectedMode()
-      this.setData({ mode })
+      this.setData({ mode, error: mode ? '' : '请先去学习页选择任务。' })
     } catch (error) {
       this.setData({
         error: error instanceof Error ? error.message : '加载学习状态失败',
@@ -55,7 +69,8 @@ Page<PracticeData>({
     }
   },
   async generateQuestions() {
-    const { mode, loading } = this.data
+    const { mode, loading, canUsePractice } = this.data
+    if (!canUsePractice) return
     if (!mode || loading) {
       if (!mode) wx.showToast({ title: '请先去学习页选择任务', icon: 'none' })
       return
@@ -88,7 +103,7 @@ Page<PracticeData>({
     const index = Number(event.currentTarget.dataset.index)
     const current = this.data.generated[index]
     const mode = this.data.mode
-    if (!current || !mode || this.data.submitting) return
+    if (!current || !mode || this.data.submitting || !this.data.canUsePractice) return
     const answer = this.data.answers[index] ?? ''
     this.setData({ submitting: true, error: '' })
     try {
@@ -129,6 +144,10 @@ Page<PracticeData>({
     pronunciationPlayer.play()
   },
   goChat() {
+    if (!this.data.canUseChat) {
+      wx.showToast({ title: '当前账号没有 AI 讲解权限', icon: 'none' })
+      return
+    }
     this.syncExplainContext()
     wx.navigateTo({ url: '/pages/chat/index?source=practice' })
   },
@@ -142,7 +161,7 @@ Page<PracticeData>({
       mode_id: mode?.id,
       study_type: mode?.type,
       translation_mode: mode?.mode,
-      current_question_index,
+      current_question_index: currentQuestionIndex,
       question_snapshots: this.data.generated.map((item, index) => ({
         index: index + 1,
         question: item.question,

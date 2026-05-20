@@ -3,9 +3,9 @@
     "pages/login/index",
     "pages/dashboard/index",
     "pages/study/index",
-    "pages/practice/index",
     "pages/history/index",
     "pages/settings/index",
+    "pages/practice/index",
     "pages/chat/index"
   ],
   "window": {
@@ -28,10 +28,6 @@
       {
         "pagePath": "pages/study/index",
         "text": "学习"
-      },
-      {
-        "pagePath": "pages/practice/index",
-        "text": "练习"
       },
       {
         "pagePath": "pages/history/index",

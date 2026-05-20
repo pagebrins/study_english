@@ -10,10 +10,19 @@ let pronunciationPlayer: WechatMiniprogram.InnerAudioContext | null = null
 const resolveAudioURL = (url: string) =>
   /^https?:\/\//i.test(url) ? url : `${miniappConfig.apiBaseUrl}${url.startsWith('/') ? url : `/${url}`}`
 
+type CalendarDay = {
+  key: string
+  label: string
+  day: string
+  isToday: boolean
+  isPlanDay: boolean
+}
+
 type ModePageData = {
   loading: boolean
   savingGoal: boolean
   submittingAssessment: boolean
+  startingAssessment: boolean
   error: string
   bundle: LearningPlanBundle
   visibleItems: LearningPlanBundle['items']
@@ -22,13 +31,18 @@ type ModePageData = {
   userName: string
   goal: string
   assessmentAnswers: string[]
+  calendarDays: CalendarDay[]
+  suggestedGoal: string
 }
+
+const fallbackGoal = '完成初始水平测试后制定学习目标'
 
 Page<ModePageData>({
   data: {
     loading: false,
     savingGoal: false,
     submittingAssessment: false,
+    startingAssessment: false,
     error: '',
     bundle: {
       assessment_items: [],
@@ -42,26 +56,57 @@ Page<ModePageData>({
     userName: getStorageUser()?.name ?? '同学',
     goal: '',
     assessmentAnswers: [],
+    calendarDays: [],
+    suggestedGoal: fallbackGoal,
   },
   onShow() {
     if (!requireLogin()) return
     void this.loadStatus()
   },
+  buildCalendarDays(planDate?: string) {
+    const target = planDate ? new Date(`${planDate}T00:00:00`) : new Date()
+    const today = new Date()
+    const start = new Date(target)
+    const weekday = start.getDay() || 7
+    start.setDate(start.getDate() - (weekday - 1))
+    const labels = ['一', '二', '三', '四', '五', '六', '日']
+    return labels.map((label, index) => {
+      const current = new Date(start)
+      current.setDate(start.getDate() + index)
+      const key = current.toISOString().slice(0, 10)
+      const month = current.getMonth() + 1
+      const date = current.getDate()
+      return {
+        key,
+        label,
+        day: `${month}/${date}`,
+        isToday:
+          current.getFullYear() === today.getFullYear() &&
+          current.getMonth() === today.getMonth() &&
+          current.getDate() === today.getDate(),
+        isPlanDay: Boolean(planDate) && key === planDate,
+      }
+    })
+  },
+  syncBundle(bundle: LearningPlanBundle, selectedModeID?: number) {
+    const shouldClearMode = bundle.goal_required || bundle.assessment_required
+    if (shouldClearMode) {
+      setSelectedMode(null)
+    }
+    this.setData({
+      bundle,
+      visibleItems: bundle.items.filter((item) => item.study_type === this.data.selectedType),
+      selectedModeID: shouldClearMode ? 0 : (selectedModeID ?? this.data.selectedModeID),
+      goal: bundle.profile?.goal && bundle.profile.goal !== fallbackGoal ? bundle.profile.goal : '',
+      assessmentAnswers: bundle.assessment_items.map((item) => item.user_answer ?? ''),
+      calendarDays: this.buildCalendarDays(bundle.plan?.plan_date),
+    })
+  },
   async loadStatus() {
     this.setData({ loading: true, error: '' })
     try {
       const bundle = await learningPlanService.current()
-      const shouldClearMode = bundle.goal_required || bundle.assessment_required
-      if (shouldClearMode) {
-        setSelectedMode(null)
-      }
-      this.setData({
-        bundle,
-        visibleItems: bundle.items.filter((item) => item.study_type === this.data.selectedType),
-        selectedModeID: shouldClearMode ? 0 : this.data.selectedModeID,
-        goal: bundle.profile?.goal ?? '',
-        assessmentAnswers: bundle.assessment_items.map((item) => item.user_answer ?? ''),
-      })
+      this.syncBundle(bundle)
     } catch (error) {
       this.setData({
         error: error instanceof Error ? error.message : '加载学习状态失败',
@@ -80,17 +125,30 @@ Page<ModePageData>({
   onGoalInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ goal: event.detail.value })
   },
+  async startInitialAssessment() {
+    if (this.data.startingAssessment) return
+    this.setData({ startingAssessment: true, error: '' })
+    try {
+      const bundle = await learningPlanService.setGoal({
+        goal: this.data.goal.trim() || this.data.suggestedGoal,
+      })
+      setSelectedMode(null)
+      this.syncBundle(bundle, 0)
+      wx.showToast({ title: '已进入水平测试', icon: 'success' })
+    } catch (error) {
+      this.setData({
+        error: error instanceof Error ? error.message : '启动水平测试失败',
+      })
+    } finally {
+      this.setData({ startingAssessment: false })
+    }
+  },
   async saveGoal() {
     this.setData({ savingGoal: true, error: '' })
     try {
-      const bundle = await learningPlanService.setGoal({ goal: this.data.goal.trim() })
+      const bundle = await learningPlanService.setGoal({ goal: this.data.goal.trim() || this.data.suggestedGoal })
       setSelectedMode(null)
-      this.setData({
-        bundle,
-        visibleItems: bundle.items.filter((item) => item.study_type === this.data.selectedType),
-        selectedModeID: 0,
-        assessmentAnswers: bundle.assessment_items.map((item) => item.user_answer ?? ''),
-      })
+      this.syncBundle(bundle, 0)
       wx.showToast({ title: '目标已保存', icon: 'success' })
     } catch (error) {
       this.setData({
@@ -121,12 +179,7 @@ Page<ModePageData>({
         })),
       })
       setSelectedMode(null)
-      this.setData({
-        bundle,
-        visibleItems: bundle.items.filter((item) => item.study_type === this.data.selectedType),
-        selectedModeID: 0,
-        assessmentAnswers: [],
-      })
+      this.syncBundle(bundle, 0)
       wx.showToast({ title: '测试已完成', icon: 'success' })
     } catch (error) {
       this.setData({
@@ -169,14 +222,14 @@ Page<ModePageData>({
   },
   goPractice() {
     if (this.data.bundle.goal_required || this.data.bundle.assessment_required) {
-      wx.showToast({ title: '请先完成目标设置或测评', icon: 'none' })
+      wx.showToast({ title: '请先完成水平测试', icon: 'none' })
       return
     }
     if (!this.data.selectedModeID) {
       wx.showToast({ title: '请先选择任务', icon: 'none' })
       return
     }
-    wx.switchTab({ url: '/pages/practice/index' })
+    wx.navigateTo({ url: '/pages/practice/index' })
   },
   goDashboard() {
     wx.switchTab({ url: '/pages/dashboard/index' })

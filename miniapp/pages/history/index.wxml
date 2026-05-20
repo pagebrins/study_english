@@ -3,11 +3,16 @@
     <text class="section-title">历史记录与复盘</text>
     <text class="section-subtitle">今日平均分 {{score}}，已答 {{answered}} 题。可以按学习类型和模式快速回看。</text>
     <view class="hero-actions">
-      <button class="primary-button action-button" bindtap="goPractice">继续练习</button>
+      <button wx:if="{{canPractice}}" class="primary-button action-button" bindtap="goPractice">继续练习</button>
+      <view wx:else class="ghost-button action-button">当前账号没有练习权限</view>
     </view>
   </view>
 
-  <view class="section-card filter-card">
+  <view wx:if="{{error}}" class="section-card filter-card">
+    <text class="error-text">{{error}}</text>
+  </view>
+
+  <view wx:if="{{canView}}" class="section-card filter-card">
     <text class="field-label">学习类型</text>
     <picker mode="selector" range="{{['单词', '句子', '文章']}}" bindchange="onTypeChange">
       <view class="field-picker">{{selectedType === 1 ? '单词' : selectedType === 2 ? '句子' : '文章'}}</view>
@@ -19,16 +24,12 @@
     </picker>
   </view>
 
-  <view wx:if="{{error}}" class="section-card filter-card">
-    <text class="error-text">{{error}}</text>
-  </view>
-
   <view wx:if="{{loading}}" class="section-card filter-card">
     <text class="muted">正在加载历史记录...</text>
   </view>
 
   <empty-state
-    wx:if="{{!loading && !error && items.length === 0}}"
+    wx:if="{{canView && !loading && !error && items.length === 0}}"
     title="还没有练习记录"
     description="先去练习页答几道题，这里就会自动沉淀下来。"
   />
@@ -58,6 +59,6 @@
       播放英文答案
     </button>
     <text class="history-time">{{item.create_time}}</text>
-    <button class="secondary-button ask-button" data-index="{{index}}" bindtap="askAI">AI 讲解这题</button>
+    <button wx:if="{{canChat}}" class="secondary-button ask-button" data-index="{{index}}" bindtap="askAI">AI 讲解这题</button>
   </view>
 </view>

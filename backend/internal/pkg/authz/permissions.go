@@ -6,7 +6,6 @@ const (
 	RoleGuest   = "guest"
 
 	PermDashboardView           = "dashboard.view"
-	PermModesManage             = "modes.manage"
 	PermStudyView               = "study.view"
 	PermHistoryView             = "history.view"
 	PermPracticeUse             = "practice.use"
@@ -32,7 +31,6 @@ var DefaultPermissionSeeds = []struct {
 	Description string
 }{
 	{Code: PermDashboardView, Name: "Dashboard View", Description: "Access dashboard pages"},
-	{Code: PermModesManage, Name: "Modes Manage", Description: "Access and manage modes"},
 	{Code: PermStudyView, Name: "Study View", Description: "Access study pages"},
 	{Code: PermHistoryView, Name: "History View", Description: "Access history pages"},
 	{Code: PermPracticeUse, Name: "Practice Use", Description: "Use practice generate/submit"},
@@ -45,7 +43,6 @@ var DefaultPermissionSeeds = []struct {
 var DefaultRolePermissionCodes = map[string][]string{
 	RoleAdmin: {
 		PermDashboardView,
-		PermModesManage,
 		PermStudyView,
 		PermHistoryView,
 		PermPracticeUse,
@@ -56,7 +53,6 @@ var DefaultRolePermissionCodes = map[string][]string{
 	},
 	RoleLearner: {
 		PermDashboardView,
-		PermModesManage,
 		PermStudyView,
 		PermHistoryView,
 		PermPracticeUse,
@@ -64,7 +60,6 @@ var DefaultRolePermissionCodes = map[string][]string{
 	},
 	RoleGuest: {
 		PermDashboardView,
-		PermModesManage,
 		PermStudyView,
 		PermHistoryView,
 		PermPracticeUse,

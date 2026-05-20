@@ -8,7 +8,7 @@
       <button class="primary-button action-button" bindtap="generateQuestions" loading="{{loading}}">
         {{loading ? '生成中...' : '生成题目'}}
       </button>
-      <button wx:if="{{mode}}" class="secondary-button action-button" bindtap="goChat">AI 讲解</button>
+      <button wx:if="{{mode && canUseChat}}" class="secondary-button action-button" bindtap="goChat">AI 讲解</button>
       <button wx:else class="secondary-button action-button" bindtap="goStudy">去学习页</button>
     </view>
     <text wx:if="{{error}}" class="error-text">{{error}}</text>
